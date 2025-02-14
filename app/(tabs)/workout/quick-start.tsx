@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,17 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Modal,
   Animated,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import { workoutPlans } from "../../../assets/data/workouts";
+import ConfettiCannon from "react-native-confetti-cannon";
+import { completeWorkout } from "../../../src/services/workout";
+import { auth } from "../../../firebase/config";
 
 const COLORS = {
   primary: "#FF6B6B",
@@ -25,6 +30,41 @@ const COLORS = {
   textSecondary: "#636E72",
   border: "#FFE5E5",
   divider: "#FFE5E5",
+};
+
+// Modify the getExerciseImage function
+const getExerciseImage = (imageUrl: string) => {
+  try {
+    // Extract the filename from the path
+    const filename = imageUrl.split("/").pop()?.toLowerCase();
+
+    // Map of all available exercise images
+    const imageMap: { [key: string]: any } = {
+      "jumping-jacks.gif": require("../../../assets/images/exercises/jumping-jacks.gif"),
+      "high-knees.gif": require("../../../assets/images/exercises/high-knees.gif"),
+      "mountain-climbers.gif": require("../../../assets/images/exercises/mountain-climbers.gif"),
+      "pushup.gif": require("../../../assets/images/exercises/pushup.gif"),
+      "wide-arm-push-up.gif": require("../../../assets/images/exercises/wide-arm-push-up.gif"),
+      "diamond_push-up.gif": require("../../../assets/images/exercises/Diamond_Push-Up.gif"),
+      "plank.jpg": require("../../../assets/images/exercises/plank.jpg"),
+      "russian-twist.gif": require("../../../assets/images/exercises/russian-twist.gif"),
+      "leg-raises.gif": require("../../../assets/images/exercises/leg-raises.gif"),
+      "squats.gif": require("../../../assets/images/exercises/squats.gif"),
+      "lunges.gif": require("../../../assets/images/exercises/lunges.gif"),
+      "burpee.webp": require("../../../assets/images/exercises/burpee.webp"),
+    };
+
+    if (filename && filename in imageMap) {
+      return imageMap[filename];
+    }
+
+    // Return default plank image if the specific image is not found
+    console.warn(`Image not found: ${filename}, using fallback`);
+    return require("../../../assets/images/exercises/plank.jpg");
+  } catch (error) {
+    console.error("Error loading exercise image:", error);
+    return require("../../../assets/images/exercises/plank.jpg");
+  }
 };
 
 export default function QuickStartScreen() {
@@ -43,7 +83,14 @@ export default function QuickStartScreen() {
   const [scaleAnim] = useState(new Animated.Value(1));
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [bgMusic, setBgMusic] = useState<Audio.Sound | null>(null);
+  const [completionSound, setCompletionSound] = useState<Audio.Sound | null>(
+    null
+  );
   const [bgMusicVolume, setBgMusicVolume] = useState(0);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const confettiRef = useRef<any>(null);
+  const [showTips, setShowTips] = useState(false);
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
 
@@ -124,12 +171,39 @@ export default function QuickStartScreen() {
     await bgMusic.stopAsync();
   };
 
-  // Load background music when component mounts
+  // Load completion sound
+  const loadCompletionSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../../assets/audio/workout-complete-male.mp3")
+      );
+      setCompletionSound(sound);
+    } catch (error) {
+      console.error("Error loading completion sound:", error);
+    }
+  };
+
+  // Play completion sound
+  const playCompletionSound = async () => {
+    try {
+      if (completionSound) {
+        await completionSound.replayAsync();
+      }
+    } catch (error) {
+      console.error("Error playing completion sound:", error);
+    }
+  };
+
+  // Load sounds when component mounts
   useEffect(() => {
     loadBackgroundMusic();
+    loadCompletionSound();
     return () => {
       if (bgMusic) {
         bgMusic.unloadAsync();
+      }
+      if (completionSound) {
+        completionSound.unloadAsync();
       }
     };
   }, []);
@@ -197,20 +271,48 @@ export default function QuickStartScreen() {
     return () => clearInterval(interval);
   }, [isPaused, timeLeft, isResting, currentExerciseIndex]);
 
+  const getMotivationalMessage = () => {
+    const messages = [
+      "You crushed it! 💪",
+      "What a fantastic workout! 🌟",
+      "You're getting stronger every day! 💪",
+      "Amazing effort! Keep pushing! 🔥",
+      "You're on fire! Great work! 🎯",
+      "One step closer to your goals! 🎉",
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  };
+
   const handleWorkoutComplete = async () => {
     await fadeOutMusic();
-    Alert.alert(
-      "Workout Complete!",
-      `Great job! You completed the quick workout in ${Math.floor(
-        totalTimeElapsed / 60
-      )} minutes.`,
-      [
-        {
-          text: "OK",
-          onPress: () => router.replace("/(tabs)/workout"),
-        },
-      ]
-    );
+
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId || !workout?.id) return;
+
+      await completeWorkout(workout.id);
+
+      // Show completion modal with animation
+      setShowCompletionModal(true);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      // Play completion sound and trigger confetti
+      await playCompletionSound();
+      setTimeout(() => {
+        confettiRef.current?.start();
+      }, 300);
+    } catch (error) {
+      console.error("Error completing workout:", error);
+    }
+  };
+
+  const handleCloseCompletion = () => {
+    setShowCompletionModal(false);
+    router.replace("/(tabs)/workout");
   };
 
   const formatTime = (seconds: number): string => {
@@ -248,37 +350,54 @@ export default function QuickStartScreen() {
     if (bgMusic) {
       bgMusic.pauseAsync();
     }
-    Alert.alert(
-      "Quit Workout",
-      "Are you sure you want to quit this workout?",
-      [
-        {
-          text: "Resume",
-          onPress: async () => {
-            setIsPaused(false);
-            await resumeMusic();
+
+    // Use confirm for web compatibility
+    if (typeof window !== "undefined") {
+      const confirmQuit = window.confirm(
+        "Are you sure you want to quit this workout?"
+      );
+      if (confirmQuit) {
+        fadeOutMusic().then(() => {
+          router.replace("/(tabs)/workout");
+        });
+      } else {
+        setIsPaused(false);
+        resumeMusic();
+      }
+    } else {
+      // Fallback to Alert for native
+      Alert.alert(
+        "Quit Workout",
+        "Are you sure you want to quit this workout?",
+        [
+          {
+            text: "Resume",
+            onPress: async () => {
+              setIsPaused(false);
+              await resumeMusic();
+            },
+            style: "default",
           },
-          style: "default",
-        },
-        {
-          text: "Cancel",
-          onPress: async () => {
-            setIsPaused(false);
-            await resumeMusic();
+          {
+            text: "Cancel",
+            onPress: async () => {
+              setIsPaused(false);
+              await resumeMusic();
+            },
+            style: "cancel",
           },
-          style: "cancel",
-        },
-        {
-          text: "Quit",
-          style: "destructive",
-          onPress: async () => {
-            await fadeOutMusic();
-            router.replace("/(tabs)/workout");
+          {
+            text: "Quit",
+            style: "destructive",
+            onPress: async () => {
+              await fadeOutMusic();
+              router.replace("/(tabs)/workout");
+            },
           },
-        },
-      ],
-      { cancelable: false }
-    );
+        ],
+        { cancelable: false }
+      );
+    }
   };
 
   if (!workout || !currentExercise) {
@@ -317,12 +436,30 @@ export default function QuickStartScreen() {
           </View>
 
           {/* Current Exercise Section */}
-          <ScrollView style={styles.exerciseSection}>
-            <Text style={styles.exerciseName}>
-              {isResting ? "Rest Period" : currentExercise.name}
-            </Text>
+          <View style={styles.exerciseSection}>
+            {/* Exercise Image */}
             {isResting ? (
-              <View style={styles.nextExerciseContainer}>
+              <>
+                <Image
+                  source={getExerciseImage(
+                    workout.exercises[currentExerciseIndex + 1].imageUrl
+                  )}
+                  style={styles.exerciseImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.restControls}>
+                  <TouchableOpacity
+                    style={styles.addTimeButton}
+                    onPress={() => setTimeLeft((prev) => prev + 15)}
+                  >
+                    <Ionicons
+                      name="add-circle"
+                      size={24}
+                      color={COLORS.primary}
+                    />
+                    <Text style={styles.addTimeText}>+15s</Text>
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.nextExerciseTitle}>Next Exercise:</Text>
                 <Text style={styles.nextExerciseName}>
                   {workout.exercises[currentExerciseIndex + 1].name}
@@ -330,9 +467,59 @@ export default function QuickStartScreen() {
                 <Text style={styles.nextExerciseDescription}>
                   {workout.exercises[currentExerciseIndex + 1].description}
                 </Text>
-              </View>
+              </>
             ) : (
               <>
+                <Image
+                  source={getExerciseImage(currentExercise.imageUrl)}
+                  style={styles.exerciseImage}
+                  resizeMode="contain"
+                />
+                <View style={styles.exerciseHeader}>
+                  <Text style={styles.exerciseName}>
+                    {currentExercise.name}
+                  </Text>
+                  {currentExercise.tips && currentExercise.tips.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.tipsButton}
+                      onPress={() => setShowTips(!showTips)}
+                    >
+                      <Ionicons
+                        name={
+                          showTips
+                            ? "information-circle"
+                            : "information-circle-outline"
+                        }
+                        size={24}
+                        color={COLORS.primary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {showTips && (
+                  <View style={styles.tipsPopupOverlay}>
+                    <View style={styles.tipsPopup}>
+                      <View style={styles.tipsHeader}>
+                        <Text style={styles.tipsTitle}>Tips:</Text>
+                        <TouchableOpacity
+                          onPress={() => setShowTips(false)}
+                          style={styles.closeTipsButton}
+                        >
+                          <Ionicons
+                            name="close-circle"
+                            size={24}
+                            color={COLORS.textSecondary}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      {currentExercise.tips.map((tip, index) => (
+                        <Text key={index} style={styles.tipText}>
+                          • {tip}
+                        </Text>
+                      ))}
+                    </View>
+                  </View>
+                )}
                 <Text style={styles.exerciseDescription}>
                   {currentExercise.description}
                 </Text>
@@ -341,17 +528,14 @@ export default function QuickStartScreen() {
                     {currentExercise.sets} sets × {currentExercise.reps} reps
                   </Text>
                 )}
-                <View style={styles.tipsContainer}>
-                  <Text style={styles.tipsTitle}>Tips:</Text>
-                  {currentExercise.tips.map((tip, index) => (
-                    <Text key={index} style={styles.tipText}>
-                      • {tip}
-                    </Text>
-                  ))}
-                </View>
+                {currentExercise.duration && (
+                  <Text style={styles.exerciseDetail}>
+                    Duration: {currentExercise.duration} seconds
+                  </Text>
+                )}
               </>
             )}
-          </ScrollView>
+          </View>
 
           {/* Controls Section */}
           <View style={styles.controlsSection}>
@@ -368,9 +552,55 @@ export default function QuickStartScreen() {
             <TouchableOpacity style={styles.quitButton} onPress={handleQuit}>
               <Text style={styles.quitButtonText}>Quit Workout</Text>
             </TouchableOpacity>
+
+            {/* Debug button - Remove before production */}
+            {/* {__DEV__ && (
+              <TouchableOpacity
+                style={styles.debugButton}
+                onPress={handleWorkoutComplete}
+              >
+                <Text style={styles.debugButtonText}>🐛 Test Completion</Text>
+              </TouchableOpacity>
+            )} */}
           </View>
         </>
       )}
+
+      <Modal
+        visible={showCompletionModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalContainer}>
+          <Animated.View style={[styles.completionCard, { opacity: fadeAnim }]}>
+            <ConfettiCannon
+              ref={confettiRef}
+              count={200}
+              origin={{ x: -10, y: 0 }}
+              autoStart={false}
+              fadeOut={true}
+            />
+
+            <Ionicons name="trophy" size={80} color={COLORS.secondary} />
+            <Text style={styles.completionTitle}>Workout Complete!</Text>
+            <Text style={styles.motivationalMessage}>
+              {getMotivationalMessage()}
+            </Text>
+            <Text style={styles.completionStats}>
+              Time: {Math.floor(totalTimeElapsed / 60)} minutes{"\n"}
+              Exercises: {workout.exercises.length}
+              {"\n"}
+              Estimated Calories: {workout.calories}
+            </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={handleCloseCompletion}
+            >
+              <Text style={styles.closeButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -397,24 +627,35 @@ const styles = StyleSheet.create({
   },
   exerciseSection: {
     flex: 1,
-    padding: 20,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  exerciseImage: {
+    width: "100%",
+    height: 200, // Reduced height
+    marginBottom: 15,
+    borderRadius: 12,
+    backgroundColor: COLORS.card,
   },
   exerciseName: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 12,
-    color: "#333",
+    fontWeight: "600",
+    marginBottom: 8,
+    textAlign: "center",
+    color: COLORS.text,
   },
   exerciseDescription: {
     fontSize: 16,
-    color: "#666",
-    marginBottom: 16,
-    lineHeight: 24,
+    textAlign: "center",
+    marginBottom: 12,
+    color: COLORS.textSecondary,
   },
   exerciseDetail: {
     fontSize: 16,
-    color: "#666",
-    marginBottom: 16,
+    textAlign: "center",
+    color: COLORS.primary,
+    marginBottom: 8,
   },
   tipsContainer: {
     backgroundColor: "#f8f9fa",
@@ -461,27 +702,164 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.primary,
   },
-  nextExerciseContainer: {
-    backgroundColor: COLORS.background,
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
-  },
   nextExerciseTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.text,
     marginBottom: 8,
+    color: COLORS.text,
   },
   nextExerciseName: {
     fontSize: 20,
     fontWeight: "bold",
-    color: COLORS.primary,
     marginBottom: 8,
+    textAlign: "center",
+    color: COLORS.primary,
   },
   nextExerciseDescription: {
-    fontSize: 14,
+    fontSize: 16,
+    textAlign: "center",
     color: COLORS.textSecondary,
-    lineHeight: 20,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  completionCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    width: "85%",
+    shadowColor: COLORS.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  completionTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  motivationalMessage: {
+    fontSize: 18,
+    color: COLORS.primary,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  completionStats: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  closeButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  closeButtonText: {
+    color: COLORS.card,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  debugButton: {
+    marginTop: 10,
+    backgroundColor: "#FFE5E5",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderStyle: "dashed",
+  },
+  debugButtonText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  exerciseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    position: "relative",
+    width: "100%",
+  },
+  tipsButton: {
+    position: "absolute",
+    right: 0,
+    padding: 8,
+    zIndex: 1,
+  },
+  tipsPopupOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  tipsPopup: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 20,
+    width: "95%",
+    maxHeight: "90%",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  tipsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  closeTipsButton: {
+    padding: 4,
+  },
+  restControls: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  addTimeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addTimeText: {
+    color: COLORS.primary,
+    marginLeft: 4,
+    fontWeight: "600",
   },
 });

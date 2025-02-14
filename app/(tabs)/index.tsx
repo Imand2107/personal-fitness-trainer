@@ -30,6 +30,31 @@ const COLORS = {
   divider: "#FFE5E5",
 };
 
+interface AchievementCardProps {
+  title: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  date: string;
+}
+
+const AchievementCard = ({
+  title,
+  description,
+  icon,
+  date,
+}: AchievementCardProps) => (
+  <View style={styles.achievementCard}>
+    <View style={styles.achievementIcon}>
+      <Ionicons name={icon} size={24} color={COLORS.secondary} />
+    </View>
+    <View style={styles.achievementInfo}>
+      <Text style={styles.achievementTitle}>{title}</Text>
+      <Text style={styles.achievementDescription}>{description}</Text>
+      <Text style={styles.achievementDate}>{date}</Text>
+    </View>
+  </View>
+);
+
 export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [recentWorkouts, setRecentWorkouts] = useState<Workout[]>([]);
@@ -268,6 +293,36 @@ export default function HomeScreen() {
           <Ionicons name="analytics" size={24} color="#FF6B6B" />
           <Text style={styles.actionText}>Update Goals</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Achievements Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Achievements</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllButton}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <AchievementCard
+            title="First Workout"
+            description="Completed your first workout"
+            icon="trophy"
+            date="Today"
+          />
+          <AchievementCard
+            title="Consistency"
+            description="Completed 3 workouts this week"
+            icon="star"
+            date="2 days ago"
+          />
+          <AchievementCard
+            title="Early Bird"
+            description="Completed a morning workout"
+            icon="sunny"
+            date="Yesterday"
+          />
+        </ScrollView>
       </View>
 
       {/* Recent Workouts */}
@@ -583,5 +638,48 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: 8,
+  },
+  achievementCard: {
+    flexDirection: "row",
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 16,
+    width: 280,
+    shadowColor: COLORS.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  achievementIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.background,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  achievementInfo: {
+    flex: 1,
+  },
+  achievementTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  achievementDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  achievementDate: {
+    fontSize: 12,
+    color: COLORS.primary,
   },
 });
