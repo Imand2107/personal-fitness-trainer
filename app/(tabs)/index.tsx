@@ -115,6 +115,26 @@ export default function HomeScreen() {
     );
   };
 
+  const getCurrentWeek = () => {
+    if (!user?.goals?.[0]?.deadline) return { current: 1, total: 12 };
+
+    const startDate = user.createdAt.toDate();
+    const endDate = user.goals[0].deadline.toDate();
+    const today = new Date();
+
+    const totalWeeks = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+    );
+    const currentWeek = Math.ceil(
+      (today.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+    );
+
+    return {
+      current: Math.min(Math.max(1, currentWeek), totalWeeks),
+      total: totalWeeks,
+    };
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -127,24 +147,61 @@ export default function HomeScreen() {
     <ScrollView style={styles.container}>
       {/* Welcome Section */}
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome back,</Text>
-        <Text style={styles.userName}>{user?.profile.name}</Text>
+        <View style={styles.headerTop}>
+          <View style={styles.welcomeContainer}>
+            <Text style={styles.welcomeText}>Welcome back,</Text>
+            <Text style={styles.userName}>{user?.profile.name}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => router.push("/(tabs)/settings")}
+          >
+            <Ionicons name="settings-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.weekContainer}>
+          <View style={styles.weekIndicator}>
+            <View style={styles.weekProgress}>
+              <View
+                style={[
+                  styles.weekProgressFill,
+                  {
+                    width: `${
+                      (getCurrentWeek().current / getCurrentWeek().total) * 100
+                    }%`,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+          <Text style={styles.weekText}>
+            Week {getCurrentWeek().current}/{getCurrentWeek().total}
+          </Text>
+        </View>
       </View>
 
       {/* Stats Overview */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, styles.elevatedCard]}>
         <View style={styles.statCard}>
-          <Ionicons name="flame" size={24} color="#FF9500" />
+          <View style={styles.statIconContainer}>
+            <Ionicons name="flame" size={24} color="#FF9500" />
+          </View>
           <Text style={styles.statValue}>{streak}</Text>
           <Text style={styles.statLabel}>Day Streak</Text>
         </View>
+        <View style={styles.statDivider} />
         <View style={styles.statCard}>
-          <Ionicons name="time" size={24} color="#30B0C7" />
+          <View style={styles.statIconContainer}>
+            <Ionicons name="time" size={24} color="#30B0C7" />
+          </View>
           <Text style={styles.statValue}>{totalMinutes}</Text>
           <Text style={styles.statLabel}>Total Minutes</Text>
         </View>
+        <View style={styles.statDivider} />
         <View style={styles.statCard}>
-          <Ionicons name="trophy" size={24} color="#FFD700" />
+          <View style={styles.statIconContainer}>
+            <Ionicons name="trophy" size={24} color="#FFD700" />
+          </View>
           <Text style={styles.statValue}>
             {recentWorkouts.filter((w) => w.completed).length}
           </Text>
@@ -273,42 +330,102 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
     backgroundColor: "#007AFF",
+  },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  welcomeContainer: {
+    flex: 1,
   },
   welcomeText: {
     color: "#fff",
     fontSize: 16,
+    opacity: 0.9,
+    marginBottom: 4,
   },
   userName: {
     color: "#fff",
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
+  },
+  weekContainer: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    marginTop: 8,
+  },
+  weekIndicator: {
+    width: 200,
+    height: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 3,
+    marginBottom: 12,
+  },
+  weekProgress: {
+    height: "100%",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  weekProgressFill: {
+    height: 6,
+    backgroundColor: "#fff",
+    borderRadius: 3,
+  },
+  weekText: {
+    color: "#fff",
+    fontSize: 14,
+    opacity: 0.9,
   },
   statsContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    padding: 20,
+    justifyContent: "space-between",
+    padding: 24,
     backgroundColor: "#fff",
-    borderRadius: 15,
-    marginTop: -20,
+    borderRadius: 16,
+    marginTop: -30,
     marginHorizontal: 20,
+    marginBottom: 24,
+  },
+  elevatedCard: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   statCard: {
+    flex: 1,
     alignItems: "center",
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
   },
   statValue: {
     fontSize: 24,
     fontWeight: "bold",
-    marginVertical: 4,
+    color: "#1c1c1e",
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#666",
+    marginTop: 4,
+  },
+  statDivider: {
+    width: 1,
+    height: "80%",
+    backgroundColor: "#E5E5EA",
+    marginHorizontal: 8,
   },
   section: {
     padding: 20,
@@ -436,5 +553,8 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 10,
     fontStyle: "italic",
+  },
+  settingsButton: {
+    padding: 8,
   },
 });
