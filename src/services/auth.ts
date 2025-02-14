@@ -110,4 +110,28 @@ export const getCurrentUser = async (): Promise<User | null> => {
 
 export const subscribeToAuthChanges = (callback: (user: FirebaseUser | null) => void) => {
   return onAuthStateChanged(auth, callback);
+};
+
+export const updateUserProfile = async (profile: UserProfile): Promise<void> => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('No authenticated user');
+
+  try {
+    const userDocRef = doc(usersCollection, currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User document not found');
+    }
+
+    const userData = userDoc.data() as User;
+    await setDoc(userDocRef, {
+      ...userData,
+      profile,
+      updatedAt: Timestamp.now()
+    });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
 }; 

@@ -26,6 +26,30 @@ const COLORS = {
   divider: "#FFE5E5",
 };
 
+const calculateDetailedAge = (
+  birthDate: Date
+): { years: number; months: number } => {
+  const today = new Date();
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let months = today.getMonth() - birthDate.getMonth();
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  // Adjust for day of month
+  if (today.getDate() < birthDate.getDate()) {
+    months--;
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+  }
+
+  return { years, months };
+};
+
 export default function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,7 +106,27 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Personal Information</Text>
         <View style={styles.infoRow}>
           <Text style={styles.label}>Age</Text>
-          <Text style={styles.value}>{user.profile.age} years</Text>
+          <Text style={styles.value}>
+            {(() => {
+              if (!user.profile.dateOfBirth) return "Not set";
+              const age = calculateDetailedAge(
+                user.profile.dateOfBirth.toDate()
+              );
+              return `${age.years} years${
+                age.months > 0 ? `, ${age.months} months` : ""
+              }`;
+            })()}
+          </Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Date of Birth</Text>
+          <Text style={styles.value}>
+            {user.profile.dateOfBirth?.toDate().toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.label}>Gender</Text>

@@ -6,13 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { doc, updateDoc } from "firebase/firestore";
-import { auth, usersCollection } from "../../firebase/config";
+import { updateUserProfile, getCurrentUser } from "../../src/services/auth";
 import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/Colors";
+import { doc, updateDoc, Timestamp } from "firebase/firestore";
+import { usersCollection } from "../../firebase/config";
+import { GoalType } from "../../src/types/workout";
 
-type GoalType = "weight" | "strength" | "stamina";
 type BodyType = "ectomorph" | "mesomorph" | "endomorph";
 type Duration = "short" | "medium" | "long";
 
@@ -36,14 +39,14 @@ export default function GoalSettingsScreen() {
   const goals: {
     type: GoalType;
     title: string;
-    icon: string;
+    icon: keyof typeof Ionicons.glyphMap;
     description: string;
     workouts: string[];
   }[] = [
     {
       type: "weight",
       title: "Weight Management",
-      icon: "barbell-outline",
+      icon: "barbell",
       description:
         "High-intensity workouts designed for effective weight management and fat burning",
       workouts: ["Weight Loss HIIT", "Fat Burning Circuit"],
@@ -51,77 +54,89 @@ export default function GoalSettingsScreen() {
     {
       type: "strength",
       title: "Build Strength",
-      icon: "fitness-outline",
+      icon: "fitness",
       description:
-        "Focus on muscle building and strength development with progressive overload",
-      workouts: ["Upper Body Power", "Lower Body Power"],
+        "Progressive resistance training to build muscle and increase strength",
+      workouts: ["Strength Training", "Muscle Building"],
     },
     {
       type: "stamina",
-      title: "Increase Stamina",
-      icon: "pulse-outline",
+      title: "Improve Stamina",
+      icon: "pulse",
       description:
-        "Improve cardiovascular fitness and endurance with varied intensity workouts",
-      workouts: ["Endurance Builder", "HIIT Endurance"],
+        "Endurance-focused workouts to boost cardiovascular fitness and stamina",
+      workouts: ["Cardio Endurance", "HIIT Circuit"],
     },
   ];
 
   const bodyTypes: {
     type: BodyType;
     title: string;
+    icon: keyof typeof Ionicons.glyphMap;
     description: string;
-    recommendations: string;
   }[] = [
     {
       type: "ectomorph",
       title: "Ectomorph",
-      description: "Lean and long, difficulty gaining weight",
-      recommendations: "Focus on strength training with shorter rest periods",
+      icon: "body",
+      description: "Naturally lean and find it hard to gain weight",
     },
     {
       type: "mesomorph",
       title: "Mesomorph",
-      description: "Athletic and muscular, easy to gain/lose weight",
-      recommendations: "Balanced approach with mixed workout types",
+      icon: "body",
+      description: "Athletic build and respond well to exercise",
     },
     {
       type: "endomorph",
       title: "Endomorph",
-      description: "Naturally bigger, difficulty losing weight",
-      recommendations:
-        "Emphasis on high-intensity cardio with strength training",
+      icon: "body",
+      description: "Naturally broad and find it hard to lose weight",
     },
   ];
 
   const durations: {
     type: Duration;
     title: string;
-    weeks: number;
     description: string;
+    weeks: number;
   }[] = [
     {
       type: "short",
-      title: "Short Term",
+      title: "4 Weeks",
+      description: "Quick start program for immediate results",
       weeks: 4,
-      description: "Perfect for kickstarting your fitness journey",
     },
     {
       type: "medium",
-      title: "Medium Term",
-      weeks: 12,
-      description: "Ideal for sustainable progress and habit formation",
+      title: "8 Weeks",
+      description: "Balanced program for steady progress",
+      weeks: 8,
     },
     {
       type: "long",
-      title: "Long Term",
-      weeks: 24,
-      description: "Comprehensive program for lasting transformation",
+      title: "12 Weeks",
+      description: "Comprehensive program for lasting change",
+      weeks: 12,
     },
   ];
 
+  const getDurationInMs = (duration: Duration): number => {
+    switch (duration) {
+      case "short":
+        return 4 * 7 * 24 * 60 * 60 * 1000; // 4 weeks
+      case "medium":
+        return 8 * 7 * 24 * 60 * 60 * 1000; // 8 weeks
+      case "long":
+        return 12 * 7 * 24 * 60 * 60 * 1000; // 12 weeks
+      default:
+        return 8 * 7 * 24 * 60 * 60 * 1000; // Default to 8 weeks
+    }
+  };
+
   const handleNext = async () => {
     if (!selectedGoal || !selectedBodyType || !selectedDuration) {
-      setError("Please make all selections to continue");
+      setError("Please select all options to continue");
       return;
     }
 
@@ -129,25 +144,35 @@ export default function GoalSettingsScreen() {
       setLoading(true);
       setError("");
 
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
         throw new Error("No authenticated user found");
       }
 
-      const goal: Goal = {
-        type: selectedGoal,
-        duration: selectedDuration,
-      };
+      const { profile } = currentUser;
 
-      await updateDoc(doc(usersCollection, userId), {
-        "profile.bodyType": selectedBodyType,
-        goals: [goal],
+      // Update user profile with body type
+      await updateUserProfile({
+        ...profile,
+        bodyType: selectedBodyType,
       });
 
-      router.push("./exercise-setup");
+      // Set goal with deadline based on selected duration
+      const deadline = new Date(Date.now() + getDurationInMs(selectedDuration));
+      await updateDoc(doc(usersCollection, currentUser.uid), {
+        goals: [
+          {
+            type: selectedGoal,
+            target: 0, // This will be customized based on the goal type
+            deadline: Timestamp.fromDate(deadline),
+          },
+        ],
+      });
+
+      router.push("/(onboarding)/exercise-setup");
     } catch (err) {
-      console.error("Error saving goals:", err);
-      setError("Failed to save your goals. Please try again.");
+      setError("Failed to save your preferences. Please try again.");
+      console.error("Goal settings error:", err);
     } finally {
       setLoading(false);
     }
@@ -155,115 +180,116 @@ export default function GoalSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-          <Text style={styles.backButtonText}>BMI Setup</Text>
-        </TouchableOpacity>
-        <View style={styles.progressIndicator}>
-          <View style={[styles.progressDot, styles.progressDotCompleted]} />
-          <View style={[styles.progressDot, styles.progressDotActive]} />
-          <View style={styles.progressDot} />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+            <Text style={styles.backButtonText}>BMI Setup</Text>
+          </TouchableOpacity>
+          <View style={styles.progressIndicator}>
+            <View style={[styles.progressDot, styles.progressDotCompleted]} />
+            <View style={[styles.progressDot, styles.progressDotActive]} />
+            <View style={styles.progressDot} />
+          </View>
         </View>
-      </View>
 
-      <ScrollView style={styles.scrollContent}>
-        <Text style={styles.title}>Set Your Fitness Goals</Text>
-        <Text style={styles.subtitle}>
-          Let's customize your fitness journey based on your goals
-        </Text>
+        <View style={styles.content}>
+          <Ionicons name="trophy-outline" size={60} color={COLORS.primary} />
+          <Text style={styles.title}>Set Your Goals</Text>
+          <Text style={styles.subtitle}>
+            Choose your fitness goals and preferences
+          </Text>
+        </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Choose Your Primary Goal</Text>
+          <Text style={styles.sectionTitle}>What's your main goal?</Text>
           {goals.map((goal) => (
             <TouchableOpacity
               key={goal.type}
               style={[
                 styles.card,
-                selectedGoal === goal.type && styles.selectedCard,
+                selectedGoal === goal.type && styles.cardSelected,
               ]}
               onPress={() => setSelectedGoal(goal.type)}
             >
-              <View style={styles.cardHeader}>
+              <View style={styles.cardIcon}>
                 <Ionicons
-                  name={goal.icon as any}
-                  size={24}
-                  color={selectedGoal === goal.type ? "#fff" : "#007AFF"}
+                  name={goal.icon}
+                  size={28}
+                  color={
+                    selectedGoal === goal.type ? COLORS.card : COLORS.primary
+                  }
                 />
+              </View>
+              <View style={styles.cardContent}>
                 <Text
                   style={[
                     styles.cardTitle,
-                    selectedGoal === goal.type && styles.selectedText,
+                    selectedGoal === goal.type && styles.cardTitleSelected,
                   ]}
                 >
                   {goal.title}
                 </Text>
-              </View>
-              <Text
-                style={[
-                  styles.cardDescription,
-                  selectedGoal === goal.type && styles.selectedText,
-                ]}
-              >
-                {goal.description}
-              </Text>
-              <View style={styles.workoutsList}>
-                {goal.workouts.map((workout, index) => (
-                  <Text
-                    key={index}
-                    style={[
-                      styles.workoutItem,
-                      selectedGoal === goal.type && styles.selectedText,
-                    ]}
-                  >
-                    • {workout}
-                  </Text>
-                ))}
+                <Text
+                  style={[
+                    styles.cardDescription,
+                    selectedGoal === goal.type &&
+                      styles.cardDescriptionSelected,
+                  ]}
+                >
+                  {goal.description}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Body Type</Text>
+          <Text style={styles.sectionTitle}>What's your body type?</Text>
           {bodyTypes.map((type) => (
             <TouchableOpacity
               key={type.type}
               style={[
                 styles.card,
-                selectedBodyType === type.type && styles.selectedCard,
+                selectedBodyType === type.type && styles.cardSelected,
               ]}
               onPress={() => setSelectedBodyType(type.type)}
             >
-              <Text
-                style={[
-                  styles.cardTitle,
-                  selectedBodyType === type.type && styles.selectedText,
-                ]}
-              >
-                {type.title}
-              </Text>
-              <Text
-                style={[
-                  styles.cardDescription,
-                  selectedBodyType === type.type && styles.selectedText,
-                ]}
-              >
-                {type.description}
-              </Text>
-              <Text
-                style={[
-                  styles.recommendations,
-                  selectedBodyType === type.type && styles.selectedText,
-                ]}
-              >
-                {type.recommendations}
-              </Text>
+              <View style={styles.cardIcon}>
+                <Ionicons
+                  name={type.icon}
+                  size={28}
+                  color={
+                    selectedBodyType === type.type
+                      ? COLORS.card
+                      : COLORS.primary
+                  }
+                />
+              </View>
+              <View style={styles.cardContent}>
+                <Text
+                  style={[
+                    styles.cardTitle,
+                    selectedBodyType === type.type && styles.cardTitleSelected,
+                  ]}
+                >
+                  {type.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.cardDescription,
+                    selectedBodyType === type.type &&
+                      styles.cardDescriptionSelected,
+                  ]}
+                >
+                  {type.description}
+                </Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -276,30 +302,25 @@ export default function GoalSettingsScreen() {
                 key={duration.type}
                 style={[
                   styles.durationCard,
-                  selectedDuration === duration.type && styles.selectedCard,
+                  selectedDuration === duration.type &&
+                    styles.durationCardSelected,
                 ]}
                 onPress={() => setSelectedDuration(duration.type)}
               >
                 <Text
                   style={[
                     styles.durationTitle,
-                    selectedDuration === duration.type && styles.selectedText,
+                    selectedDuration === duration.type &&
+                      styles.durationTitleSelected,
                   ]}
                 >
                   {duration.title}
                 </Text>
                 <Text
                   style={[
-                    styles.durationWeeks,
-                    selectedDuration === duration.type && styles.selectedText,
-                  ]}
-                >
-                  {duration.weeks} weeks
-                </Text>
-                <Text
-                  style={[
                     styles.durationDescription,
-                    selectedDuration === duration.type && styles.selectedText,
+                    selectedDuration === duration.type &&
+                      styles.durationDescriptionSelected,
                   ]}
                 >
                   {duration.description}
@@ -326,7 +347,10 @@ export default function GoalSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
@@ -335,7 +359,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: COLORS.border,
   },
   backButton: {
     flexDirection: "row",
@@ -343,7 +367,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backButtonText: {
-    color: "#007AFF",
+    color: COLORS.primary,
     fontSize: 16,
     marginLeft: 4,
   },
@@ -356,132 +380,147 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: COLORS.border,
   },
   progressDotCompleted: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: COLORS.success,
   },
   progressDotActive: {
-    backgroundColor: "#2196f3",
+    backgroundColor: COLORS.primary,
   },
-  scrollContent: {
-    flex: 1,
+  content: {
+    alignItems: "center",
     padding: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 10,
+    marginTop: 16,
+    marginBottom: 8,
+    color: COLORS.text,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
+    color: COLORS.textSecondary,
     textAlign: "center",
+    marginBottom: 24,
   },
   section: {
-    marginBottom: 30,
+    padding: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 15,
-    color: "#333",
+    marginBottom: 16,
+    color: COLORS.text,
   },
   card: {
-    backgroundColor: "#f8f9fa",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  selectedCard: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  cardHeader: {
     flexDirection: "row",
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cardSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${COLORS.primary}15`,
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginRight: 16,
+  },
+  cardContent: {
+    flex: 1,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginLeft: 10,
-    color: "#333",
+    marginBottom: 4,
+    color: COLORS.text,
+  },
+  cardTitleSelected: {
+    color: COLORS.card,
   },
   cardDescription: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
   },
-  selectedText: {
-    color: "#fff",
+  cardDescriptionSelected: {
+    color: `${COLORS.card}CC`,
   },
   durationContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 8,
   },
   durationCard: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
-    padding: 15,
+    backgroundColor: COLORS.card,
     borderRadius: 12,
-    marginHorizontal: 5,
-    alignItems: "center",
+    padding: 12,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+  durationCardSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   durationTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 5,
-    color: "#333",
-  },
-  durationWeeks: {
-    fontSize: 12,
-    color: "#666",
-  },
-  button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  buttonDisabled: {
-    backgroundColor: "#ccc",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  error: {
-    color: "#e74c3c",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  workoutsList: {
-    marginTop: 8,
-    paddingLeft: 8,
-  },
-  workoutItem: {
-    fontSize: 14,
-    color: "#666",
     marginBottom: 4,
+    color: COLORS.text,
   },
-  recommendations: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 8,
-    fontStyle: "italic",
+  durationTitleSelected: {
+    color: COLORS.card,
   },
   durationDescription: {
     fontSize: 12,
-    color: "#666",
-    marginTop: 4,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+  },
+  durationDescriptionSelected: {
+    color: `${COLORS.card}CC`,
+  },
+  button: {
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginTop: 24,
+    marginBottom: Platform.OS === "ios" ? 0 : 24,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  buttonDisabled: {
+    backgroundColor: COLORS.textSecondary,
+  },
+  buttonText: {
+    color: COLORS.card,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  error: {
+    color: COLORS.error,
+    marginHorizontal: 20,
+    marginBottom: 20,
     textAlign: "center",
   },
 });

@@ -5,54 +5,59 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { registerUser } from "../../src/services/auth";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/Colors";
 import { UserProfile } from "../../src/types";
+import { Timestamp } from "firebase/firestore";
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const validateForm = (): boolean => {
-    if (!email || !password || !name) {
+  const handleRegister = async () => {
+    if (!email || !password || !confirmPassword || !name) {
       setError("Please fill in all fields");
-      return false;
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
     }
 
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
-      return false;
+      return;
     }
-
-    return true;
-  };
-
-  const handleRegister = async () => {
-    if (!validateForm()) return;
 
     try {
       setLoading(true);
       setError("");
-
       const profile: UserProfile = {
         name,
-        age: 0, // Will be set during onboarding
-        height: 0, // Will be set during onboarding
-        weight: 0, // Will be set during onboarding
-        bmi: 0, // Will be calculated during onboarding
+        age: 0,
+        height: 0,
+        weight: 0,
+        bmi: 0,
         onboardingCompleted: false,
+        dateOfBirth: Timestamp.now(),
+        gender: "male",
       };
-
       await registerUser(email, password, profile);
       router.replace("/(onboarding)/bmi-setup");
     } catch (err) {
-      setError("Registration failed. Please try again.");
+      setError("Failed to create account. Email may already be in use.");
       console.error("Registration error:", err);
     } finally {
       setLoading(false);
@@ -60,106 +65,180 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>
-        Let's get started with your fitness journey
-      </Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Ionicons name="fitness" size={60} color={COLORS.primary} />
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>
+            Join us to start your personalized fitness journey
+          </Text>
+        </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <TextInput
-        style={styles.input}
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-        autoCapitalize="words"
-      />
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="person-outline"
+              size={24}
+              color={COLORS.textSecondary}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Your Name"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              placeholderTextColor={COLORS.textSecondary}
+            />
+          </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="mail-outline"
+              size={24}
+              color={COLORS.textSecondary}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholderTextColor={COLORS.textSecondary}
+            />
+          </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={24}
+              color={COLORS.textSecondary}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholderTextColor={COLORS.textSecondary}
+            />
+          </View>
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleRegister}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? "Creating Account..." : "Sign Up"}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.inputContainer}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={24}
+              color={COLORS.textSecondary}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              placeholderTextColor={COLORS.textSecondary}
+            />
+          </View>
 
-      <View style={styles.footer}>
-        <Text>Already have an account? </Text>
-        <Link href="/login" asChild>
-          <TouchableOpacity>
-            <Text style={styles.link}>Login</Text>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? "Creating Account..." : "Create Account"}
+            </Text>
           </TouchableOpacity>
-        </Link>
-      </View>
-    </ScrollView>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Already have an account? </Text>
+          <Link href="/login" asChild>
+            <TouchableOpacity>
+              <Text style={styles.link}>Sign in</Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
     flexGrow: 1,
     padding: 20,
     justifyContent: "center",
-    backgroundColor: "#fff",
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 40,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 10,
-    textAlign: "center",
+    marginTop: 20,
+    marginBottom: 8,
+    color: COLORS.text,
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
-    marginBottom: 30,
+    color: COLORS.textSecondary,
     textAlign: "center",
+  },
+  form: {
+    marginBottom: 20,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    height: 56,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 15,
-    marginBottom: 15,
-    borderRadius: 8,
+    flex: 1,
+    marginLeft: 12,
     fontSize: 16,
+    color: COLORS.text,
   },
   button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   buttonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: COLORS.textSecondary,
   },
   buttonText: {
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: "bold",
+    color: COLORS.card,
     fontSize: 16,
+    fontWeight: "600",
   },
   error: {
-    color: "#e74c3c",
-    marginBottom: 15,
+    color: COLORS.error,
+    marginBottom: 20,
     textAlign: "center",
   },
   footer: {
@@ -167,8 +246,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 20,
   },
+  footerText: {
+    color: COLORS.textSecondary,
+  },
   link: {
-    color: "#007AFF",
-    fontWeight: "bold",
+    color: COLORS.primary,
+    fontWeight: "600",
   },
 });

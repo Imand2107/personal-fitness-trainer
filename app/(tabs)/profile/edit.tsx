@@ -7,30 +7,20 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, Timestamp } from "firebase/firestore";
 import { auth, usersCollection } from "../../../firebase/config";
 import { getCurrentUser } from "../../../src/services/auth";
 import { User, Goal, GoalType } from "../../../src/types";
-import { Timestamp } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { COLORS } from "../../../constants/Colors";
 
 type Duration = "short" | "medium" | "long";
-
-const COLORS = {
-  primary: "#FF6B6B",
-  primaryDark: "#E85D5D",
-  primaryLight: "#FF8787",
-  secondary: "#FFB84C",
-  success: "#51CF66",
-  background: "#FFF9F9",
-  card: "#FFFFFF",
-  text: "#2D3436",
-  textSecondary: "#636E72",
-  border: "#FFE5E5",
-};
 
 // Body type descriptions and icons
 const bodyTypeInfo = {
@@ -75,6 +65,8 @@ export default function EditProfileScreen() {
   const [selectedDuration, setSelectedDuration] = useState<Duration>("medium");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -92,6 +84,9 @@ export default function EditProfileScreen() {
       setHeight(currentUser.profile.height.toString());
       setWeight(currentUser.profile.weight.toString());
       setBodyType(currentUser.profile.bodyType || "");
+      if (currentUser.profile.dateOfBirth) {
+        setDateOfBirth(currentUser.profile.dateOfBirth.toDate());
+      }
 
       // Set initial goal values if they exist
       if (currentUser.goals && currentUser.goals.length > 0) {
@@ -107,6 +102,45 @@ export default function EditProfileScreen() {
   const calculateBMI = (weight: number, height: number): number => {
     const heightInMeters = height / 100;
     return Number((weight / (heightInMeters * heightInMeters)).toFixed(1));
+  };
+
+  const calculateDetailedAge = (
+    birthDate: Date
+  ): { years: number; months: number } => {
+    const today = new Date();
+    let years = today.getFullYear() - birthDate.getFullYear();
+    let months = today.getMonth() - birthDate.getMonth();
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    // Adjust for day of month
+    if (today.getDate() < birthDate.getDate()) {
+      months--;
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+    }
+
+    return { years, months };
+  };
+
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setDateOfBirth(selectedDate);
+    }
   };
 
   const handleSave = async () => {
@@ -130,6 +164,7 @@ export default function EditProfileScreen() {
       const heightNum = Number(height);
       const weightNum = Number(weight);
       const bmi = calculateBMI(weightNum, heightNum);
+      const age = calculateDetailedAge(dateOfBirth);
       console.log("[Save] BMI calculated:", bmi);
 
       // // Check if goal type has changed
@@ -185,6 +220,8 @@ export default function EditProfileScreen() {
         "profile.weight": weightNum,
         "profile.bmi": bmi,
         "profile.bodyType": bodyType,
+        "profile.age": age,
+        "profile.dateOfBirth": Timestamp.fromDate(dateOfBirth),
         goals: goal ? [goal] : [],
         updatedAt: Timestamp.fromDate(new Date()),
       };
@@ -248,160 +285,270 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* <Text style={styles.title}>Edit Profile</Text> */}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.form}>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Physical Stats</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Physical Stats</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Height (cm)</Text>
+              <TextInput
+                style={styles.input}
+                value={height}
+                onChangeText={setHeight}
+                keyboardType="numeric"
+                placeholder="Enter your height"
+              />
+            </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Height (cm)</Text>
-          <TextInput
-            style={styles.input}
-            value={height}
-            onChangeText={setHeight}
-            keyboardType="numeric"
-            placeholder="Enter your height"
-          />
-        </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Weight (kg)</Text>
+              <TextInput
+                style={styles.input}
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="numeric"
+                placeholder="Enter your weight"
+              />
+            </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Weight (kg)</Text>
-          <TextInput
-            style={styles.input}
-            value={weight}
-            onChangeText={setWeight}
-            keyboardType="numeric"
-            placeholder="Enter your weight"
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Body Type</Text>
-          <View style={styles.bodyTypeContainer}>
-            {(["ectomorph", "mesomorph", "endomorph"] as const).map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.bodyTypeButton,
-                  bodyType === type && styles.bodyTypeButtonSelected,
-                ]}
-                onPress={() => setBodyType(type)}
-              >
-                <Ionicons
-                  name={
-                    bodyTypeInfo[type].icon as keyof typeof Ionicons.glyphMap
-                  }
-                  size={24}
-                  color={bodyType === type ? "#fff" : COLORS.primary}
-                />
-                <Text
-                  style={[
-                    styles.bodyTypeButtonText,
-                    bodyType === type && styles.bodyTypeButtonTextSelected,
-                  ]}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </Text>
-                <Text style={styles.typeDescription}>
-                  {bodyTypeInfo[type].description}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Body Type</Text>
+              <View style={styles.bodyTypeContainer}>
+                {(["ectomorph", "mesomorph", "endomorph"] as const).map(
+                  (type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.bodyTypeButton,
+                        bodyType === type && styles.bodyTypeButtonSelected,
+                      ]}
+                      onPress={() => setBodyType(type)}
+                    >
+                      <Ionicons
+                        name={
+                          bodyTypeInfo[type]
+                            .icon as keyof typeof Ionicons.glyphMap
+                        }
+                        size={24}
+                        color={bodyType === type ? "#fff" : COLORS.primary}
+                      />
+                      <Text
+                        style={[
+                          styles.bodyTypeButtonText,
+                          bodyType === type &&
+                            styles.bodyTypeButtonTextSelected,
+                        ]}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </Text>
+                      <Text style={styles.typeDescription}>
+                        {bodyTypeInfo[type].description}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Update Your Goal</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Update Your Goal</Text>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Goal Type</Text>
-          <View style={styles.goalTypeContainer}>
-            {(["weight", "strength", "stamina"] as const).map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.goalTypeButton,
-                  selectedGoalType === type && styles.goalTypeButtonSelected,
-                ]}
-                onPress={() => setSelectedGoalType(type)}
-              >
-                <Ionicons
-                  name={
-                    goalTypeInfo[type].icon as keyof typeof Ionicons.glyphMap
-                  }
-                  size={24}
-                  color={selectedGoalType === type ? "#fff" : COLORS.primary}
-                />
-                <Text
-                  style={[
-                    styles.goalTypeButtonText,
-                    selectedGoalType === type &&
-                      styles.goalTypeButtonTextSelected,
-                  ]}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </Text>
-                <Text style={styles.typeDescription}>
-                  {goalTypeInfo[type].description}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Goal Type</Text>
+              <View style={styles.goalTypeContainer}>
+                {(["weight", "strength", "stamina"] as const).map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.goalTypeButton,
+                      selectedGoalType === type &&
+                        styles.goalTypeButtonSelected,
+                    ]}
+                    onPress={() => setSelectedGoalType(type)}
+                  >
+                    <Ionicons
+                      name={
+                        goalTypeInfo[type]
+                          .icon as keyof typeof Ionicons.glyphMap
+                      }
+                      size={24}
+                      color={
+                        selectedGoalType === type ? "#fff" : COLORS.primary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.goalTypeButtonText,
+                        selectedGoalType === type &&
+                          styles.goalTypeButtonTextSelected,
+                      ]}
+                    >
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </Text>
+                    <Text style={styles.typeDescription}>
+                      {goalTypeInfo[type].description}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Program Duration</Text>
+              <View style={styles.durationContainer}>
+                {(["short", "medium", "long"] as const).map((duration) => (
+                  <TouchableOpacity
+                    key={duration}
+                    style={[
+                      styles.durationButton,
+                      selectedDuration === duration &&
+                        styles.durationButtonSelected,
+                    ]}
+                    onPress={() => setSelectedDuration(duration)}
+                  >
+                    <Ionicons
+                      name="time-outline"
+                      size={24}
+                      color={
+                        selectedDuration === duration ? "#fff" : COLORS.primary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.durationButtonText,
+                        selectedDuration === duration &&
+                          styles.durationButtonTextSelected,
+                      ]}
+                    >
+                      {duration === "short"
+                        ? "4 weeks"
+                        : duration === "medium"
+                        ? "12 weeks"
+                        : "24 weeks"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Program Duration</Text>
-          <View style={styles.durationContainer}>
-            {(["short", "medium", "long"] as const).map((duration) => (
-              <TouchableOpacity
-                key={duration}
-                style={[
-                  styles.durationButton,
-                  selectedDuration === duration &&
-                    styles.durationButtonSelected,
-                ]}
-                onPress={() => setSelectedDuration(duration)}
-              >
-                <Ionicons
-                  name="time-outline"
-                  size={24}
-                  color={
-                    selectedDuration === duration ? "#fff" : COLORS.primary
-                  }
-                />
-                <Text
-                  style={[
-                    styles.durationButtonText,
-                    selectedDuration === duration &&
-                      styles.durationButtonTextSelected,
-                  ]}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+
+            {Platform.OS === "web" ? (
+              <View style={styles.webDateContainer}>
+                <Text style={styles.label}>Date of Birth</Text>
+                <View style={styles.webDateInputContainer}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={24}
+                    color={COLORS.textSecondary}
+                  />
+                  <input
+                    type="date"
+                    className="web-date-input"
+                    value={dateOfBirth.toISOString().split("T")[0]}
+                    onChange={(e) => setDateOfBirth(new Date(e.target.value))}
+                    max={new Date().toISOString().split("T")[0]}
+                    style={{
+                      flex: 1,
+                      marginLeft: 12,
+                      fontSize: 16,
+                      color: COLORS.text,
+                      border: "none",
+                      outline: "none",
+                      backgroundColor: "transparent",
+                      fontFamily: "inherit",
+                      cursor: "pointer",
+                      padding: "8px 0",
+                      width: "100%",
+                    }}
+                  />
+                </View>
+                <style>
+                  {`
+                    .web-date-input::-webkit-calendar-picker-indicator {
+                      cursor: pointer;
+                      filter: invert(0.5);
+                    }
+                    .web-date-input::-webkit-datetime-edit {
+                      padding: 0;
+                    }
+                    .web-date-input::-webkit-datetime-edit-fields-wrapper {
+                      padding: 0;
+                    }
+                  `}
+                </style>
+              </View>
+            ) : (
+              <View style={styles.mobileDateContainer}>
+                <Text style={styles.label}>Date of Birth</Text>
+                <TouchableOpacity
+                  style={styles.dateButton}
+                  onPress={() => setShowDatePicker(true)}
                 >
-                  {duration === "short"
-                    ? "4 weeks"
-                    : duration === "medium"
-                    ? "12 weeks"
-                    : "24 weeks"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </View>
+                  <View style={styles.dateButtonContent}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={24}
+                      color={COLORS.textSecondary}
+                    />
+                    <Text style={styles.dateButtonText}>
+                      {formatDate(dateOfBirth)}
+                    </Text>
+                    <Ionicons
+                      name="chevron-down-outline"
+                      size={20}
+                      color={COLORS.textSecondary}
+                    />
+                  </View>
+                </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-        onPress={handleSave}
-        disabled={loading}
-      >
-        <Text style={styles.saveButtonText}>
-          {loading ? "Saving..." : "Save Changes"}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={dateOfBirth}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+              </View>
+            )}
+
+            <View style={styles.ageContainer}>
+              <Text style={styles.label}>Current Age</Text>
+              <Text style={styles.ageText}>
+                {(() => {
+                  const age = calculateDetailedAge(dateOfBirth);
+                  return `${age.years} years${
+                    age.months > 0 ? `, ${age.months} months` : ""
+                  }`;
+                })()}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            <Text style={styles.saveButtonText}>
+              {loading ? "Saving..." : "Save Changes"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -411,11 +558,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#333",
+  scrollContent: {
+    flexGrow: 1,
+  },
+  form: {
+    flex: 1,
   },
   section: {
     marginBottom: 20,
@@ -568,5 +715,71 @@ const styles = StyleSheet.create({
     color: "#e74c3c",
     marginBottom: 15,
     textAlign: "center",
+  },
+  webDateContainer: {
+    marginBottom: 20,
+  },
+  webDateInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+    height: 56,
+    marginTop: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  mobileDateContainer: {
+    marginBottom: 20,
+  },
+  dateButton: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginTop: 8,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  dateButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    height: 56,
+  },
+  dateButtonText: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  ageContainer: {
+    marginTop: 16,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  ageText: {
+    fontSize: 18,
+    color: COLORS.primary,
+    fontWeight: "600",
+    marginTop: 4,
   },
 });
