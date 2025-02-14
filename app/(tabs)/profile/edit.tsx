@@ -14,8 +14,55 @@ import { auth, usersCollection } from "../../../firebase/config";
 import { getCurrentUser } from "../../../src/services/auth";
 import { User, Goal, GoalType } from "../../../src/types";
 import { Timestamp } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 
 type Duration = "short" | "medium" | "long";
+
+const COLORS = {
+  primary: "#FF6B6B",
+  primaryDark: "#E85D5D",
+  primaryLight: "#FF8787",
+  secondary: "#FFB84C",
+  success: "#51CF66",
+  background: "#FFF9F9",
+  card: "#FFFFFF",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+};
+
+// Body type descriptions and icons
+const bodyTypeInfo = {
+  ectomorph: {
+    icon: "body-outline",
+    description: "Lean and long body type",
+  },
+  mesomorph: {
+    icon: "fitness-outline",
+    description: "Athletic and muscular body type",
+  },
+  endomorph: {
+    icon: "body-outline",
+    description: "Naturally bigger body type",
+  },
+};
+
+// Goal type descriptions and icons
+const goalTypeInfo = {
+  weight: {
+    icon: "scale-outline",
+    description: "Weight management",
+  },
+  strength: {
+    icon: "barbell-outline",
+    description: "Build muscle and strength",
+  },
+  stamina: {
+    icon: "pulse-outline",
+    description: "Improve endurance",
+  },
+};
 
 export default function EditProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
@@ -63,20 +110,7 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
-
-    const heightNum = Number(height);
-    const weightNum = Number(weight);
-
-    if (heightNum < 100 || heightNum > 250) {
-      setError("Please enter a valid height in cm (100-250)");
-      return;
-    }
-
-    if (weightNum < 30 || weightNum > 300) {
-      setError("Please enter a valid weight in kg (30-300)");
-      return;
-    }
+    if (!validateInputs()) return;
 
     try {
       setLoading(true);
@@ -85,34 +119,65 @@ export default function EditProfileScreen() {
       const userId = auth.currentUser?.uid;
       if (!userId) throw new Error("No authenticated user found");
 
+      const heightNum = Number(height);
+      const weightNum = Number(weight);
       const bmi = calculateBMI(weightNum, heightNum);
 
-      // Create new goal object
-      const newGoal: Goal = {
-        type: selectedGoalType,
-        target: 0, // You might want to add a target input field
-        deadline: Timestamp.fromDate(
-          new Date(Date.now() + getDurationInMs(selectedDuration))
-        ),
-      };
+      // Check if goal type has changed
+      if (selectedGoalType !== user?.goals?.[0]?.type) {
+        const confirmed = await new Promise((resolve) => {
+          Alert.alert(
+            "Change Goal?",
+            "Changing your goal will reset your current goal progress. Your workout history and achievements will be preserved, but the home page will focus on your new goal progress.\n\nAre you sure you want to continue?",
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => resolve(false),
+              },
+              {
+                text: "Continue",
+                style: "destructive",
+                onPress: () => resolve(true),
+              },
+            ]
+          );
+        });
+
+        if (!confirmed) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Prepare the goal with deadline
+      const goal = selectedGoalType
+        ? {
+            type: selectedGoalType,
+            target: 0,
+            deadline: Timestamp.fromDate(
+              new Date(Date.now() + getDurationInMs(selectedDuration))
+            ),
+          }
+        : null;
 
       const updates = {
-        profile: {
-          ...user.profile,
-          height: heightNum,
-          weight: weightNum,
-          bmi: bmi,
-          bodyType: bodyType || user.profile.bodyType,
-        },
-        goals: [newGoal], // Replace existing goals with new goal
-        updatedAt: Timestamp.now(),
+        "profile.height": heightNum,
+        "profile.weight": weightNum,
+        "profile.bmi": bmi,
+        "profile.bodyType": bodyType,
+        goals: goal ? [goal] : [],
+        updatedAt: Timestamp.fromDate(new Date()),
       };
 
-      await updateDoc(doc(usersCollection, userId), updates);
+      const userRef = doc(usersCollection, userId);
+      await updateDoc(userRef, updates);
+
+      // Navigate back after successful update
       router.back();
     } catch (err) {
-      console.error("Error updating profile:", err);
-      setError("Failed to update profile");
+      console.error("Error saving profile:", err);
+      setError("Failed to save changes. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -132,9 +197,36 @@ export default function EditProfileScreen() {
     }
   };
 
+  const validateInputs = () => {
+    if (height.trim() === "") {
+      setError("Please enter a valid height in cm (100-250)");
+      return false;
+    }
+
+    if (weight.trim() === "") {
+      setError("Please enter a valid weight in kg (30-300)");
+      return false;
+    }
+
+    const heightNum = Number(height);
+    const weightNum = Number(weight);
+
+    if (heightNum < 100 || heightNum > 250) {
+      setError("Please enter a valid height in cm (100-250)");
+      return false;
+    }
+
+    if (weightNum < 30 || weightNum > 300) {
+      setError("Please enter a valid weight in kg (30-300)");
+      return false;
+    }
+
+    return true;
+  };
+
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Edit Profile</Text>
+      {/* <Text style={styles.title}>Edit Profile</Text> */}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -175,6 +267,13 @@ export default function EditProfileScreen() {
                 ]}
                 onPress={() => setBodyType(type)}
               >
+                <Ionicons
+                  name={
+                    bodyTypeInfo[type].icon as keyof typeof Ionicons.glyphMap
+                  }
+                  size={24}
+                  color={bodyType === type ? "#fff" : COLORS.primary}
+                />
                 <Text
                   style={[
                     styles.bodyTypeButtonText,
@@ -182,6 +281,9 @@ export default function EditProfileScreen() {
                   ]}
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+                <Text style={styles.typeDescription}>
+                  {bodyTypeInfo[type].description}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -204,6 +306,13 @@ export default function EditProfileScreen() {
                 ]}
                 onPress={() => setSelectedGoalType(type)}
               >
+                <Ionicons
+                  name={
+                    goalTypeInfo[type].icon as keyof typeof Ionicons.glyphMap
+                  }
+                  size={24}
+                  color={selectedGoalType === type ? "#fff" : COLORS.primary}
+                />
                 <Text
                   style={[
                     styles.goalTypeButtonText,
@@ -212,6 +321,9 @@ export default function EditProfileScreen() {
                   ]}
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+                <Text style={styles.typeDescription}>
+                  {goalTypeInfo[type].description}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -231,6 +343,13 @@ export default function EditProfileScreen() {
                 ]}
                 onPress={() => setSelectedDuration(duration)}
               >
+                <Ionicons
+                  name="time-outline"
+                  size={24}
+                  color={
+                    selectedDuration === duration ? "#fff" : COLORS.primary
+                  }
+                />
                 <Text
                   style={[
                     styles.durationButtonText,
@@ -300,89 +419,125 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   bodyTypeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    gap: 10,
   },
   bodyTypeButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
-    marginHorizontal: 4,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   bodyTypeButtonSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   bodyTypeButtonText: {
-    color: "#333",
-    fontSize: 14,
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "500",
   },
   bodyTypeButtonTextSelected: {
-    color: "#fff",
+    color: COLORS.card,
   },
   goalTypeContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    gap: 10,
   },
   goalTypeButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
-    marginHorizontal: 4,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   goalTypeButtonSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   goalTypeButtonText: {
-    color: "#333",
-    fontSize: 14,
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: "500",
   },
   goalTypeButtonTextSelected: {
-    color: "#fff",
+    color: COLORS.card,
+  },
+  typeDescription: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginLeft: "auto",
   },
   durationContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 10,
   },
   durationButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#ddd",
-    marginHorizontal: 4,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    height: 60,
   },
   durationButtonSelected: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   durationButtonText: {
-    color: "#333",
+    color: COLORS.text,
     fontSize: 14,
+    fontWeight: "500",
   },
   durationButtonTextSelected: {
-    color: "#fff",
+    color: COLORS.card,
   },
   saveButton: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    borderRadius: 12,
     alignItems: "center",
     marginTop: 20,
+    marginBottom: 30,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   saveButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: COLORS.textSecondary,
   },
   saveButtonText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 16,
     fontWeight: "600",
   },
