@@ -67,20 +67,48 @@ export default function WorkoutDetailScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Equipment Needed</Text>
-        <View style={styles.equipmentList}>
+        <View style={styles.equipmentContainer}>
           {workout.equipmentNeeded.length > 0 ? (
             workout.equipmentNeeded.map((equipment, index) => (
-              <View key={index} style={styles.equipmentItem}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={16}
-                  color={COLORS.success}
-                />
+              <View key={index} style={styles.equipmentCard}>
+                <View style={styles.equipmentIconContainer}>
+                  <Ionicons
+                    name={
+                      equipment.toLowerCase().includes("dumbbell")
+                        ? "barbell-outline"
+                        : equipment.toLowerCase().includes("mat")
+                        ? "square-outline"
+                        : equipment.toLowerCase().includes("bench")
+                        ? "bed-outline"
+                        : equipment.toLowerCase().includes("band")
+                        ? "infinite-outline"
+                        : "fitness-outline"
+                    }
+                    size={24}
+                    color={COLORS.primary}
+                  />
+                </View>
                 <Text style={styles.equipmentText}>{equipment}</Text>
               </View>
             ))
           ) : (
-            <Text style={styles.noEquipment}>No equipment needed</Text>
+            <View style={styles.noEquipmentCard}>
+              <View style={styles.noEquipmentIconContainer}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={32}
+                  color={COLORS.success}
+                />
+              </View>
+              <View style={styles.noEquipmentContent}>
+                <Text style={styles.noEquipmentTitle}>
+                  No Equipment Required
+                </Text>
+                <Text style={styles.noEquipmentSubtitle}>
+                  You can do this workout anywhere, anytime!
+                </Text>
+              </View>
+            </View>
           )}
         </View>
       </View>
@@ -189,22 +217,62 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: COLORS.text,
   },
-  equipmentList: {
-    gap: 8,
+  equipmentContainer: {
+    marginTop: 8,
   },
-  equipmentItem: {
+  equipmentCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    backgroundColor: COLORS.card,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  equipmentIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: `${COLORS.primary}15`,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
   equipmentText: {
     fontSize: 16,
     color: COLORS.text,
+    flex: 1,
   },
-  noEquipment: {
+  noEquipmentCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: `${COLORS.success}10`,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${COLORS.success}30`,
+  },
+  noEquipmentIconContainer: {
+    marginRight: 16,
+  },
+  noEquipmentContent: {
+    flex: 1,
+  },
+  noEquipmentTitle: {
     fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.success,
+    marginBottom: 4,
+  },
+  noEquipmentSubtitle: {
+    fontSize: 14,
     color: COLORS.textSecondary,
-    fontStyle: "italic",
   },
   exerciseCard: {
     backgroundColor: COLORS.card,
