@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   ScrollView,
   Alert,
   Image,
+  Modal,
+  Animated,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import ConfettiCannon from "react-native-confetti-cannon";
 import { workoutPlans } from "../../../../assets/data/workouts";
 import { completeWorkout } from "../../../../src/services/workout";
 import { auth } from "../../../../firebase/config";
@@ -24,6 +27,9 @@ export default function WorkoutSessionScreen() {
   const [isResting, setIsResting] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   const [totalTimeElapsed, setTotalTimeElapsed] = useState(0);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const confettiRef = useRef<any>(null);
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
   const nextExercise = workout?.exercises[currentExerciseIndex + 1];
@@ -63,27 +69,45 @@ export default function WorkoutSessionScreen() {
     return () => clearInterval(interval);
   }, [isPaused, timeLeft, isResting, currentExerciseIndex]);
 
+  const getMotivationalMessage = () => {
+    const messages = [
+      "You crushed it! 💪",
+      "What a fantastic workout! 🌟",
+      "You're getting stronger every day! 💪",
+      "Amazing effort! Keep pushing! 🔥",
+      "You're on fire! Great work! 🎯",
+      "One step closer to your goals! 🎉",
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  };
+
   const handleWorkoutComplete = async () => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId || !workout?.id) return;
 
       await completeWorkout(workout.id);
-      Alert.alert(
-        "Workout Complete!",
-        `Great job! You completed the workout in ${Math.floor(
-          totalTimeElapsed / 60
-        )} minutes.`,
-        [
-          {
-            text: "OK",
-            onPress: () => router.back(),
-          },
-        ]
-      );
+
+      // Show completion modal with animation
+      setShowCompletionModal(true);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      // Trigger confetti after a short delay
+      setTimeout(() => {
+        confettiRef.current?.start();
+      }, 300);
     } catch (error) {
       console.error("Error completing workout:", error);
     }
+  };
+
+  const handleCloseCompletion = () => {
+    setShowCompletionModal(false);
+    router.back();
   };
 
   const formatTime = (seconds: number): string => {
@@ -223,6 +247,42 @@ export default function WorkoutSessionScreen() {
           <Text style={styles.quitButtonText}>Quit Workout</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showCompletionModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalContainer}>
+          <Animated.View style={[styles.completionCard, { opacity: fadeAnim }]}>
+            <ConfettiCannon
+              ref={confettiRef}
+              count={200}
+              origin={{ x: -10, y: 0 }}
+              autoStart={false}
+              fadeOut={true}
+            />
+
+            <Ionicons name="trophy" size={80} color="#FFD700" />
+            <Text style={styles.completionTitle}>Workout Complete!</Text>
+            <Text style={styles.motivationalMessage}>
+              {getMotivationalMessage()}
+            </Text>
+            <Text style={styles.completionStats}>
+              Time: {Math.floor(totalTimeElapsed / 60)} minutes{"\n"}
+              Exercises: {workout.exercises.length}
+              {"\n"}
+              Estimated Calories: {workout.calories}
+            </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={handleCloseCompletion}
+            >
+              <Text style={styles.closeButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -340,6 +400,58 @@ const styles = StyleSheet.create({
   },
   quitButtonText: {
     color: "#FF3B30",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  completionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    width: "85%",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  completionTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  motivationalMessage: {
+    fontSize: 18,
+    color: "#007AFF",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  completionStats: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  closeButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  closeButtonText: {
+    color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
