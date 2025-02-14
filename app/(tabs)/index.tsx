@@ -360,7 +360,34 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))
         ) : (
-          <Text style={styles.emptyText}>No recent workouts</Text>
+          <View style={[styles.noProgressCard, { marginTop: 8 }]}>
+            <Ionicons
+              name="barbell-outline"
+              size={40}
+              color={COLORS.textSecondary}
+            />
+            <Text style={[styles.noProgressText, { marginTop: 12 }]}>
+              No Recent Workouts
+            </Text>
+            <Text style={[styles.noProgressSubtext, { marginBottom: 16 }]}>
+              Start your fitness journey today! Choose a workout plan and begin
+              your transformation.
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.startFirstWorkoutButton,
+                { backgroundColor: COLORS.primary },
+              ]}
+              onPress={() => router.push("/(tabs)/workout")}
+            >
+              <View style={styles.startFirstWorkoutContent}>
+                <Ionicons name="play-circle" size={24} color={COLORS.card} />
+                <Text style={styles.startFirstWorkoutText}>
+                  Start Your First Workout
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -720,5 +747,31 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
     textAlign: "center",
+  },
+  startFirstWorkoutButton: {
+    width: "100%",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  startFirstWorkoutContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  startFirstWorkoutText: {
+    color: COLORS.card,
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
 });
