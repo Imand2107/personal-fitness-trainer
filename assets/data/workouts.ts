@@ -217,77 +217,126 @@ export const commonExercises: Record<string, Exercise> = {
 
 // Define workout plans
 export const workoutPlans: WorkoutPlan[] = [
+  // Weight Management Workouts
   {
-    id: 'beginner_full_body',
-    category: 'full_body',
-    name: 'Beginner Full Body Workout',
-    description: 'A complete body workout suitable for beginners',
+    id: 'weight_beginner_hiit',
+    category: 'fat_burning',
+    name: 'Weight Loss HIIT',
+    description: 'High-intensity interval training for effective weight management',
     difficulty: 'beginner',
     duration: 30,
     exercises: [
       commonExercises.jumpingJacks,
-      commonExercises.squats,
-      commonExercises.pushups,
-      commonExercises.plank,
-      commonExercises.lunges
-    ],
-    restBetweenExercises: 60,
-    equipmentNeeded: [],
-    targetMuscles: ['chest', 'legs', 'core', 'back', 'shoulders'],
-    calories: 150
-  },
-  {
-    id: 'intermediate_abs',
-    category: 'abs',
-    name: 'Core Crusher Workout',
-    description: 'Intensive core workout for intermediate fitness levels',
-    difficulty: 'intermediate',
-    duration: 25,
-    exercises: [
-      commonExercises.plank,
-      commonExercises.russianTwist,
       commonExercises.mountainClimbers,
-      commonExercises.legRaises
-    ],
-    restBetweenExercises: 45,
-    equipmentNeeded: [],
-    targetMuscles: ['core', 'obliques', 'lower_abs'],
-    calories: 200
-  },
-  {
-    id: 'advanced_cardio',
-    category: 'fat_burning',
-    name: 'High Intensity Fat Burn',
-    description: 'Advanced cardio workout for maximum calorie burn',
-    difficulty: 'advanced',
-    duration: 40,
-    exercises: [
       commonExercises.burpees,
-      commonExercises.mountainClimbers,
       commonExercises.highKnees,
-      commonExercises.jumpingJacks
+      commonExercises.squats
     ],
     restBetweenExercises: 30,
     equipmentNeeded: [],
     targetMuscles: ['full_body', 'cardio'],
-    calories: 400
+    calories: 300,
+    goalType: 'weight'
   },
   {
-    id: 'chest_and_arms',
-    category: 'chest',
-    name: 'Upper Body Builder',
-    description: 'Comprehensive chest and arms workout',
+    id: 'weight_intermediate_circuit',
+    category: 'fat_burning',
+    name: 'Fat Burning Circuit',
+    description: 'Circuit training designed for optimal fat burning and muscle preservation',
     difficulty: 'intermediate',
-    duration: 35,
+    duration: 45,
+    exercises: [
+      commonExercises.burpees,
+      commonExercises.pushups,
+      commonExercises.squats,
+      commonExercises.mountainClimbers,
+      commonExercises.plank
+    ],
+    restBetweenExercises: 45,
+    equipmentNeeded: [],
+    targetMuscles: ['full_body', 'cardio'],
+    calories: 400,
+    goalType: 'weight'
+  },
+
+  // Strength Building Workouts
+  {
+    id: 'strength_upper_body',
+    category: 'chest',
+    name: 'Upper Body Power',
+    description: 'Focus on building upper body strength and muscle',
+    difficulty: 'intermediate',
+    duration: 40,
     exercises: [
       commonExercises.pushups,
       commonExercises.diamondPushups,
-      commonExercises.wideArmPushups
+      commonExercises.wideArmPushups,
+      commonExercises.plank
     ],
-    restBetweenExercises: 60,
+    restBetweenExercises: 90,
     equipmentNeeded: [],
-    targetMuscles: ['chest', 'triceps', 'shoulders'],
-    calories: 250
+    targetMuscles: ['chest', 'shoulders', 'triceps', 'core'],
+    calories: 250,
+    goalType: 'strength'
+  },
+  {
+    id: 'strength_lower_body',
+    category: 'leg',
+    name: 'Lower Body Power',
+    description: 'Build leg strength and power with compound movements',
+    difficulty: 'intermediate',
+    duration: 40,
+    exercises: [
+      commonExercises.squats,
+      commonExercises.lunges,
+      commonExercises.burpees
+    ],
+    restBetweenExercises: 90,
+    equipmentNeeded: [],
+    targetMuscles: ['quadriceps', 'hamstrings', 'glutes', 'calves'],
+    calories: 300,
+    goalType: 'strength'
+  },
+
+  // Stamina Building Workouts
+  {
+    id: 'stamina_endurance',
+    category: 'endurance',
+    name: 'Endurance Builder',
+    description: 'Improve cardiovascular endurance and stamina',
+    difficulty: 'intermediate',
+    duration: 45,
+    exercises: [
+      commonExercises.jumpingJacks,
+      commonExercises.highKnees,
+      commonExercises.mountainClimbers,
+      commonExercises.burpees
+    ],
+    restBetweenExercises: 30,
+    equipmentNeeded: [],
+    targetMuscles: ['full_body', 'cardio'],
+    calories: 350,
+    goalType: 'stamina'
+  },
+  {
+    id: 'stamina_hiit',
+    category: 'endurance',
+    name: 'HIIT Endurance',
+    description: 'High-intensity intervals to boost stamina and endurance',
+    difficulty: 'advanced',
+    duration: 35,
+    exercises: [
+      commonExercises.burpees,
+      commonExercises.mountainClimbers,
+      commonExercises.highKnees,
+      commonExercises.jumpingJacks,
+      commonExercises.squats
+    ],
+    restBetweenExercises: 20,
+    equipmentNeeded: [],
+    targetMuscles: ['full_body', 'cardio'],
+    calories: 400,
+    goalType: 'stamina'
   }
 ];
 

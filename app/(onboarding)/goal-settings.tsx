@@ -37,50 +37,85 @@ export default function GoalSettingsScreen() {
     title: string;
     icon: string;
     description: string;
+    workouts: string[];
   }[] = [
     {
       type: "weight",
       title: "Weight Management",
       icon: "barbell-outline",
       description:
-        "Focus on achieving your ideal weight through balanced workouts",
+        "High-intensity workouts designed for effective weight management and fat burning",
+      workouts: ["Weight Loss HIIT", "Fat Burning Circuit"],
     },
     {
       type: "strength",
       title: "Build Strength",
       icon: "fitness-outline",
-      description: "Develop muscle strength and improve overall power",
+      description:
+        "Focus on muscle building and strength development with progressive overload",
+      workouts: ["Upper Body Power", "Lower Body Power"],
     },
     {
       type: "stamina",
       title: "Increase Stamina",
       icon: "pulse-outline",
-      description: "Enhance your endurance and cardiovascular fitness",
+      description:
+        "Improve cardiovascular fitness and endurance with varied intensity workouts",
+      workouts: ["Endurance Builder", "HIIT Endurance"],
     },
   ];
 
-  const bodyTypes: { type: BodyType; title: string; description: string }[] = [
+  const bodyTypes: {
+    type: BodyType;
+    title: string;
+    description: string;
+    recommendations: string;
+  }[] = [
     {
       type: "ectomorph",
       title: "Ectomorph",
       description: "Lean and long, difficulty gaining weight",
+      recommendations: "Focus on strength training with shorter rest periods",
     },
     {
       type: "mesomorph",
       title: "Mesomorph",
       description: "Athletic and muscular, easy to gain/lose weight",
+      recommendations: "Balanced approach with mixed workout types",
     },
     {
       type: "endomorph",
       title: "Endomorph",
       description: "Naturally bigger, difficulty losing weight",
+      recommendations:
+        "Emphasis on high-intensity cardio with strength training",
     },
   ];
 
-  const durations: { type: Duration; title: string; weeks: number }[] = [
-    { type: "short", title: "Short Term", weeks: 4 },
-    { type: "medium", title: "Medium Term", weeks: 12 },
-    { type: "long", title: "Long Term", weeks: 24 },
+  const durations: {
+    type: Duration;
+    title: string;
+    weeks: number;
+    description: string;
+  }[] = [
+    {
+      type: "short",
+      title: "Short Term",
+      weeks: 4,
+      description: "Perfect for kickstarting your fitness journey",
+    },
+    {
+      type: "medium",
+      title: "Medium Term",
+      weeks: 12,
+      description: "Ideal for sustainable progress and habit formation",
+    },
+    {
+      type: "long",
+      title: "Long Term",
+      weeks: 24,
+      description: "Comprehensive program for lasting transformation",
+    },
   ];
 
   const handleNext = async () => {
@@ -160,6 +195,19 @@ export default function GoalSettingsScreen() {
             >
               {goal.description}
             </Text>
+            <View style={styles.workoutsList}>
+              {goal.workouts.map((workout, index) => (
+                <Text
+                  key={index}
+                  style={[
+                    styles.workoutItem,
+                    selectedGoal === goal.type && styles.selectedText,
+                  ]}
+                >
+                  • {workout}
+                </Text>
+              ))}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -190,6 +238,14 @@ export default function GoalSettingsScreen() {
               ]}
             >
               {type.description}
+            </Text>
+            <Text
+              style={[
+                styles.recommendations,
+                selectedBodyType === type.type && styles.selectedText,
+              ]}
+            >
+              {type.recommendations}
             </Text>
           </TouchableOpacity>
         ))}
@@ -222,6 +278,14 @@ export default function GoalSettingsScreen() {
                 ]}
               >
                 {duration.weeks} weeks
+              </Text>
+              <Text
+                style={[
+                  styles.durationDescription,
+                  selectedDuration === duration.type && styles.selectedText,
+                ]}
+              >
+                {duration.description}
               </Text>
             </TouchableOpacity>
           ))}
@@ -340,6 +404,27 @@ const styles = StyleSheet.create({
   error: {
     color: "#e74c3c",
     marginBottom: 20,
+    textAlign: "center",
+  },
+  workoutsList: {
+    marginTop: 8,
+    paddingLeft: 8,
+  },
+  workoutItem: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  recommendations: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 8,
+    fontStyle: "italic",
+  },
+  durationDescription: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
     textAlign: "center",
   },
 });
