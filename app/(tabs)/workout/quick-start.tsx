@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,6 +37,9 @@ export default function QuickStartScreen() {
   const [isResting, setIsResting] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   const [totalTimeElapsed, setTotalTimeElapsed] = useState(0);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdownValue, setCountdownValue] = useState(3);
+  const [scaleAnim] = useState(new Animated.Value(1));
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
 
@@ -43,6 +47,38 @@ export default function QuickStartScreen() {
     if (!workout) return;
     setTimeLeft(currentExercise?.duration || 0);
   }, [currentExerciseIndex, workout]);
+
+  // Countdown animation effect
+  useEffect(() => {
+    if (showCountdown) {
+      if (countdownValue > 0) {
+        // Animate scale up and down
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.5,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        // Decrease countdown after 1 second
+        const timer = setTimeout(() => {
+          setCountdownValue((prev) => prev - 1);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+      } else {
+        // Countdown finished, start workout
+        setShowCountdown(false);
+        setIsPaused(false);
+      }
+    }
+  }, [showCountdown, countdownValue]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -93,7 +129,13 @@ export default function QuickStartScreen() {
   };
 
   const handlePauseResume = () => {
-    setIsPaused((prev) => !prev);
+    if (isPaused) {
+      // If starting the workout, show countdown first
+      setShowCountdown(true);
+      setCountdownValue(3);
+    } else {
+      setIsPaused(true);
+    }
   };
 
   const handleQuit = () => {
@@ -143,61 +185,76 @@ export default function QuickStartScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Timer Section */}
-      <View style={styles.timerSection}>
-        <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
-        <Text style={styles.phaseText}>
-          {isResting
-            ? "Rest"
-            : `Exercise ${currentExerciseIndex + 1}/${
-                workout.exercises.length
-              }`}
-        </Text>
-      </View>
-
-      {/* Current Exercise Section */}
-      <ScrollView style={styles.exerciseSection}>
-        <Text style={styles.exerciseName}>
-          {isResting ? "Rest Period" : currentExercise.name}
-        </Text>
-        {!isResting && (
-          <>
-            <Text style={styles.exerciseDescription}>
-              {currentExercise.description}
+      {showCountdown ? (
+        <View style={styles.countdownOverlay}>
+          <Animated.Text
+            style={[
+              styles.countdownText,
+              { transform: [{ scale: scaleAnim }] },
+            ]}
+          >
+            {countdownValue}
+          </Animated.Text>
+        </View>
+      ) : (
+        <>
+          {/* Timer Section */}
+          <View style={styles.timerSection}>
+            <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+            <Text style={styles.phaseText}>
+              {isResting
+                ? "Rest"
+                : `Exercise ${currentExerciseIndex + 1}/${
+                    workout.exercises.length
+                  }`}
             </Text>
-            {currentExercise.sets && currentExercise.reps && (
-              <Text style={styles.exerciseDetail}>
-                {currentExercise.sets} sets × {currentExercise.reps} reps
-              </Text>
-            )}
-            <View style={styles.tipsContainer}>
-              <Text style={styles.tipsTitle}>Tips:</Text>
-              {currentExercise.tips.map((tip, index) => (
-                <Text key={index} style={styles.tipText}>
-                  • {tip}
-                </Text>
-              ))}
-            </View>
-          </>
-        )}
-      </ScrollView>
+          </View>
 
-      {/* Controls Section */}
-      <View style={styles.controlsSection}>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={handlePauseResume}
-        >
-          <Ionicons
-            name={isPaused ? "play-circle" : "pause-circle"}
-            size={64}
-            color={COLORS.primary}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.quitButton} onPress={handleQuit}>
-          <Text style={styles.quitButtonText}>Quit Workout</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Current Exercise Section */}
+          <ScrollView style={styles.exerciseSection}>
+            <Text style={styles.exerciseName}>
+              {isResting ? "Rest Period" : currentExercise.name}
+            </Text>
+            {!isResting && (
+              <>
+                <Text style={styles.exerciseDescription}>
+                  {currentExercise.description}
+                </Text>
+                {currentExercise.sets && currentExercise.reps && (
+                  <Text style={styles.exerciseDetail}>
+                    {currentExercise.sets} sets × {currentExercise.reps} reps
+                  </Text>
+                )}
+                <View style={styles.tipsContainer}>
+                  <Text style={styles.tipsTitle}>Tips:</Text>
+                  {currentExercise.tips.map((tip, index) => (
+                    <Text key={index} style={styles.tipText}>
+                      • {tip}
+                    </Text>
+                  ))}
+                </View>
+              </>
+            )}
+          </ScrollView>
+
+          {/* Controls Section */}
+          <View style={styles.controlsSection}>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={handlePauseResume}
+            >
+              <Ionicons
+                name={isPaused ? "play-circle" : "pause-circle"}
+                size={64}
+                color={COLORS.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quitButton} onPress={handleQuit}>
+              <Text style={styles.quitButtonText}>Quit Workout</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -275,5 +332,17 @@ const styles = StyleSheet.create({
     color: "#FF3B30",
     fontSize: 16,
     fontWeight: "600",
+  },
+  countdownOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.background,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  countdownText: {
+    fontSize: 120,
+    fontWeight: "bold",
+    color: COLORS.primary,
   },
 });
