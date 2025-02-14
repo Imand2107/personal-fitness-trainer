@@ -1,21 +1,33 @@
 import { Stack } from "expo-router";
 
+const COLORS = {
+  primary: "#FF6B6B",
+  background: "#FFF9F9",
+  card: "#FFFFFF",
+};
+
 export default function SessionLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        presentation: "modal",
         headerStyle: {
-          backgroundColor: "#FF6B6B",
+          backgroundColor: COLORS.primary,
         },
-        headerTintColor: "#FFFFFF",
+        headerTintColor: COLORS.card,
+        headerTitleStyle: {
+          fontWeight: "600",
+        },
+        contentStyle: {
+          backgroundColor: COLORS.background,
+        },
+        presentation: "modal",
       }}
     >
       <Stack.Screen
         name="[id]"
         options={{
           title: "Workout Session",
+          headerBackTitle: "Back",
         }}
       />
     </Stack>

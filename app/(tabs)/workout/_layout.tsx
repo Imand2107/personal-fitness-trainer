@@ -47,9 +47,9 @@ export default function WorkoutLayout() {
         }}
       />
       <Stack.Screen
-        name="session/[id]"
+        name="session"
         options={{
-          title: "Workout Session",
+          headerShown: false,
         }}
       />
       <Stack.Screen
