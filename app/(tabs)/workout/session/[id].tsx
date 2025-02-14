@@ -15,7 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import ConfettiCannon from "react-native-confetti-cannon";
 import { workoutPlans } from "../../../../assets/data/workouts";
-import { completeWorkout } from "../../../../src/services/workout";
+import {
+  completeWorkout,
+  updateExerciseProgress,
+} from "../../../../src/services/workout";
 import { auth } from "../../../../firebase/config";
 
 // Add color constants at the top after imports
@@ -101,31 +104,6 @@ export default function WorkoutSessionScreen() {
     setTimeLeft(currentExercise?.duration || 0);
   }, [currentExerciseIndex, workout]);
 
-  // Handle exercise transitions
-  useEffect(() => {
-    if (!workout || isPaused) return;
-
-    if (timeLeft === 0) {
-      if (isResting) {
-        // Rest period is over, move to next exercise
-        setIsResting(false);
-        if (currentExerciseIndex < workout.exercises.length - 1) {
-          setCurrentExerciseIndex((prev) => prev + 1);
-        } else {
-          handleWorkoutComplete();
-        }
-      } else if (currentExerciseIndex < workout.exercises.length - 1) {
-        // Exercise is complete, start rest period
-        setIsResting(true);
-        setTimeLeft(workout.restBetweenExercises);
-      } else {
-        // Workout is complete
-        handleWorkoutComplete();
-      }
-    }
-  }, [timeLeft, isResting, currentExerciseIndex, workout, isPaused]);
-
-  // Handle timer countdown
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -134,14 +112,39 @@ export default function WorkoutSessionScreen() {
         setTimeLeft((prev) => prev - 1);
         setTotalTimeElapsed((prev) => prev + 1);
       }, 1000);
+    } else if (timeLeft === 0 && !isPaused) {
+      if (isResting) {
+        // Rest period is over, move to next exercise
+        setIsResting(false);
+        if (currentExerciseIndex < workout!.exercises.length - 1) {
+          setCurrentExerciseIndex((prev) => prev + 1);
+          setTimeLeft(workout!.exercises[currentExerciseIndex + 1].duration);
+        } else {
+          handleWorkoutComplete();
+        }
+      } else {
+        // Exercise is complete, update progress
+        const userId = auth.currentUser?.uid;
+        if (userId && workout?.id) {
+          updateExerciseProgress(
+            workout.id,
+            currentExerciseIndex,
+            totalTimeElapsed,
+            true
+          ).catch(console.error);
+        }
+
+        if (currentExerciseIndex < workout!.exercises.length - 1) {
+          setIsResting(true);
+          setTimeLeft(workout!.restBetweenExercises);
+        } else {
+          handleWorkoutComplete();
+        }
+      }
     }
 
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isPaused, timeLeft]);
+    return () => clearInterval(interval);
+  }, [isPaused, timeLeft, isResting, currentExerciseIndex]);
 
   const getMotivationalMessage = () => {
     const messages = [
@@ -160,7 +163,20 @@ export default function WorkoutSessionScreen() {
       const userId = auth.currentUser?.uid;
       if (!userId || !workout?.id) return;
 
-      await completeWorkout(workout.id);
+      // Prepare exercise data
+      const exerciseData = workout.exercises.map((exercise) => ({
+        exerciseId: exercise.id,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        duration: exercise.duration,
+      }));
+
+      await completeWorkout(
+        workout.id,
+        totalTimeElapsed,
+        workout.calories,
+        exerciseData
+      );
 
       // Show completion modal with animation
       setShowCompletionModal(true);

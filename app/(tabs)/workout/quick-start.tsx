@@ -15,7 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import { workoutPlans } from "../../../assets/data/workouts";
 import ConfettiCannon from "react-native-confetti-cannon";
-import { completeWorkout } from "../../../src/services/workout";
+import {
+  completeWorkout,
+  updateExerciseProgress,
+} from "../../../src/services/workout";
 import { auth } from "../../../firebase/config";
 
 const COLORS = {
@@ -263,6 +266,17 @@ export default function QuickStartScreen() {
           handleWorkoutComplete();
         }
       } else {
+        // Exercise is complete, update progress
+        const userId = auth.currentUser?.uid;
+        if (userId && workout?.id) {
+          updateExerciseProgress(
+            workout.id,
+            currentExerciseIndex,
+            totalTimeElapsed,
+            true
+          ).catch(console.error);
+        }
+
         if (currentExerciseIndex < workout!.exercises.length - 1) {
           setIsResting(true);
           setTimeLeft(workout!.restBetweenExercises);
@@ -338,7 +352,20 @@ export default function QuickStartScreen() {
       const userId = auth.currentUser?.uid;
       if (!userId || !workout?.id) return;
 
-      await completeWorkout(workout.id);
+      // Prepare exercise data
+      const exerciseData = workout.exercises.map((exercise) => ({
+        exerciseId: exercise.id,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        duration: exercise.duration,
+      }));
+
+      await completeWorkout(
+        workout.id,
+        totalTimeElapsed,
+        workout.calories,
+        exerciseData
+      );
 
       // Show completion modal with animation
       setShowCompletionModal(true);
