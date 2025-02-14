@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +26,7 @@ export default function WorkoutSessionScreen() {
   const [totalTimeElapsed, setTotalTimeElapsed] = useState(0);
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
+  const nextExercise = workout?.exercises[currentExerciseIndex + 1];
 
   useEffect(() => {
     if (!workout) return;
@@ -173,6 +175,36 @@ export default function WorkoutSessionScreen() {
             </View>
           </>
         )}
+
+        {/* Next Up Section - Only show during rest periods */}
+        {isResting && nextExercise && (
+          <View style={styles.nextUpContainer}>
+            <Text style={styles.nextUpTitle}>Next Up</Text>
+            <View style={styles.nextExerciseCard}>
+              <Image
+                source={
+                  nextExercise.imageUrl
+                    ? { uri: nextExercise.imageUrl }
+                    : require("../../../../assets/images/exercises/plank.jpg")
+                }
+                style={styles.nextExerciseImage}
+                resizeMode="cover"
+              />
+              <View style={styles.nextExerciseInfo}>
+                <Text style={styles.nextExerciseName}>{nextExercise.name}</Text>
+                <Text style={styles.nextExerciseDetail}>
+                  {nextExercise.duration}s
+                  {nextExercise.sets && nextExercise.reps
+                    ? ` • ${nextExercise.sets} sets × ${nextExercise.reps} reps`
+                    : ""}
+                </Text>
+                <Text style={styles.nextExerciseDescription} numberOfLines={2}>
+                  {nextExercise.description}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Controls Section */}
@@ -241,6 +273,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginTop: 8,
+    marginBottom: 24,
   },
   tipsTitle: {
     fontSize: 16,
@@ -252,6 +285,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 4,
+    lineHeight: 20,
+  },
+  nextUpContainer: {
+    marginTop: 16,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 12,
+    padding: 16,
+  },
+  nextUpTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 12,
+  },
+  nextExerciseCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  nextExerciseImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  nextExerciseInfo: {
+    flex: 1,
+  },
+  nextExerciseName: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 4,
+  },
+  nextExerciseDetail: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  nextExerciseDescription: {
+    fontSize: 14,
+    color: "#666",
     lineHeight: 20,
   },
   controlsSection: {

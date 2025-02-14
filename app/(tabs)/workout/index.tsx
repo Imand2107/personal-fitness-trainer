@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getCurrentUser } from "../../../src/services/auth";
 import { User, Goal } from "../../../src/types";
@@ -17,10 +17,6 @@ export default function WorkoutScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-
-  useEffect(() => {
-    loadUserData();
-  }, []);
 
   const loadUserData = async () => {
     try {
@@ -36,6 +32,12 @@ export default function WorkoutScreen() {
       setLoading(false);
     }
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
 
   const getGoalIcon = (goalType: string) => {
     switch (goalType) {
