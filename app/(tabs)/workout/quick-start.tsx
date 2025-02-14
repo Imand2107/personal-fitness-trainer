@@ -160,7 +160,38 @@ export default function QuickStartScreen() {
     }
   };
 
-  // Fade in effect
+  // Modified countdown effect to start music
+  useEffect(() => {
+    if (showCountdown) {
+      if (countdownValue > 0) {
+        // Animate scale with safe numeric values
+        Animated.sequence([
+          Animated.timing(scaleAnim, {
+            toValue: 1.2,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        const timer = setTimeout(() => {
+          setCountdownValue((prev) => prev - 1);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+      } else {
+        setShowCountdown(false);
+        setIsPaused(false);
+        fadeInMusic();
+      }
+    }
+  }, [showCountdown, countdownValue]);
+
+  // Modify fadeInMusic function for safer volume handling
   const fadeInMusic = async () => {
     if (!bgMusic) {
       console.log("[Sound] No background music available");
@@ -169,7 +200,6 @@ export default function QuickStartScreen() {
 
     try {
       console.log("[Sound] Starting fade in...");
-      // Ensure the sound is loaded before playing
       const status = await bgMusic.getStatusAsync();
       if (!status.isLoaded) {
         console.log("[Sound] Sound not loaded, reloading...");
@@ -180,15 +210,17 @@ export default function QuickStartScreen() {
       await bgMusic.setVolumeAsync(0);
       await bgMusic.playAsync();
 
-      // Gradually increase volume
+      // Use safer volume values
       const targetVolume = isMuted ? 0 : 0.5;
-      const steps = 10;
-      const interval = 50; // milliseconds
-      const volumeIncrement = targetVolume / steps;
+      const steps = 5;
+      const interval = 100; // milliseconds
+      const volumeIncrement = Number((targetVolume / steps).toFixed(2));
 
       for (let i = 0; i <= steps; i++) {
         if (!bgMusic) break;
-        const newVolume = Math.min(volumeIncrement * i, targetVolume);
+        const newVolume = Number(
+          Math.min(volumeIncrement * i, targetVolume).toFixed(2)
+        );
         await bgMusic.setVolumeAsync(newVolume);
         await new Promise((resolve) => setTimeout(resolve, interval));
       }
@@ -199,7 +231,7 @@ export default function QuickStartScreen() {
     }
   };
 
-  // Fade out effect
+  // Modify fadeOutMusic function for safer volume handling
   const fadeOutMusic = async () => {
     if (!bgMusic) {
       console.log("[Sound] No background music to fade out");
@@ -208,23 +240,24 @@ export default function QuickStartScreen() {
 
     try {
       console.log("[Sound] Starting fade out...");
-      // Check if sound is loaded
       const status = await bgMusic.getStatusAsync();
       if (!status.isLoaded) {
         console.log("[Sound] Sound not loaded, skipping fade out");
         return;
       }
 
-      // Only fade out if the sound is actually playing
       if (status.isPlaying) {
-        // Gradually decrease volume
-        for (let vol = bgMusicVolume; vol >= 0; vol -= 0.1) {
-          await bgMusic.setVolumeAsync(Math.max(0, vol));
-          setBgMusicVolume(vol);
-          await new Promise((resolve) => setTimeout(resolve, 50));
+        const steps = 5;
+        const interval = 100;
+        const volumeDecrement = Number((bgMusicVolume / steps).toFixed(2));
+
+        for (let i = steps; i >= 0; i--) {
+          const newVolume = Number((volumeDecrement * i).toFixed(2));
+          await bgMusic.setVolumeAsync(Math.max(0, newVolume));
+          setBgMusicVolume(newVolume);
+          await new Promise((resolve) => setTimeout(resolve, interval));
         }
 
-        // Stop the music after fading out
         await bgMusic.stopAsync();
       }
       console.log("[Sound] Fade out complete");
@@ -295,39 +328,6 @@ export default function QuickStartScreen() {
       }
     };
   }, []);
-
-  // Modified countdown effect to start music
-  useEffect(() => {
-    if (showCountdown) {
-      if (countdownValue > 0) {
-        // Animate scale up and down
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.5,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        // Decrease countdown after 1 second
-        const timer = setTimeout(() => {
-          setCountdownValue((prev) => prev - 1);
-        }, 1000);
-
-        return () => clearTimeout(timer);
-      } else {
-        // Start workout and fade in music
-        setShowCountdown(false);
-        setIsPaused(false);
-        fadeInMusic();
-      }
-    }
-  }, [showCountdown, countdownValue]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
