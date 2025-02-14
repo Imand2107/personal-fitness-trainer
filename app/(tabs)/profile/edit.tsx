@@ -12,8 +12,10 @@ import { useRouter } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
 import { auth, usersCollection } from "../../../firebase/config";
 import { getCurrentUser } from "../../../src/services/auth";
-import { User, Goal } from "../../../src/types";
+import { User, Goal, GoalType } from "../../../src/types";
 import { Timestamp } from "firebase/firestore";
+
+type Duration = "short" | "medium" | "long";
 
 export default function EditProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
@@ -22,6 +24,8 @@ export default function EditProfileScreen() {
   const [bodyType, setBodyType] = useState<
     "ectomorph" | "mesomorph" | "endomorph" | ""
   >("");
+  const [selectedGoalType, setSelectedGoalType] = useState<GoalType>("weight");
+  const [selectedDuration, setSelectedDuration] = useState<Duration>("medium");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -41,6 +45,12 @@ export default function EditProfileScreen() {
       setHeight(currentUser.profile.height.toString());
       setWeight(currentUser.profile.weight.toString());
       setBodyType(currentUser.profile.bodyType || "");
+
+      // Set initial goal values if they exist
+      if (currentUser.goals && currentUser.goals.length > 0) {
+        setSelectedGoalType(currentUser.goals[0].type);
+        // You might want to convert the deadline to duration here
+      }
     } catch (error) {
       console.error("Error loading user data:", error);
       setError("Failed to load user data");
@@ -77,6 +87,15 @@ export default function EditProfileScreen() {
 
       const bmi = calculateBMI(weightNum, heightNum);
 
+      // Create new goal object
+      const newGoal: Goal = {
+        type: selectedGoalType,
+        target: 0, // You might want to add a target input field
+        deadline: Timestamp.fromDate(
+          new Date(Date.now() + getDurationInMs(selectedDuration))
+        ),
+      };
+
       const updates = {
         profile: {
           ...user.profile,
@@ -85,6 +104,7 @@ export default function EditProfileScreen() {
           bmi: bmi,
           bodyType: bodyType || user.profile.bodyType,
         },
+        goals: [newGoal], // Replace existing goals with new goal
         updatedAt: Timestamp.now(),
       };
 
@@ -95,6 +115,20 @@ export default function EditProfileScreen() {
       setError("Failed to update profile");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getDurationInMs = (duration: Duration): number => {
+    const weekInMs = 7 * 24 * 60 * 60 * 1000;
+    switch (duration) {
+      case "short":
+        return 4 * weekInMs; // 4 weeks
+      case "medium":
+        return 12 * weekInMs; // 12 weeks
+      case "long":
+        return 24 * weekInMs; // 24 weeks
+      default:
+        return 12 * weekInMs;
     }
   };
 
@@ -148,6 +182,67 @@ export default function EditProfileScreen() {
                   ]}
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Update Your Goal</Text>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Goal Type</Text>
+          <View style={styles.goalTypeContainer}>
+            {(["weight", "strength", "stamina"] as const).map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.goalTypeButton,
+                  selectedGoalType === type && styles.goalTypeButtonSelected,
+                ]}
+                onPress={() => setSelectedGoalType(type)}
+              >
+                <Text
+                  style={[
+                    styles.goalTypeButtonText,
+                    selectedGoalType === type &&
+                      styles.goalTypeButtonTextSelected,
+                  ]}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Program Duration</Text>
+          <View style={styles.durationContainer}>
+            {(["short", "medium", "long"] as const).map((duration) => (
+              <TouchableOpacity
+                key={duration}
+                style={[
+                  styles.durationButton,
+                  selectedDuration === duration &&
+                    styles.durationButtonSelected,
+                ]}
+                onPress={() => setSelectedDuration(duration)}
+              >
+                <Text
+                  style={[
+                    styles.durationButtonText,
+                    selectedDuration === duration &&
+                      styles.durationButtonTextSelected,
+                  ]}
+                >
+                  {duration === "short"
+                    ? "4 weeks"
+                    : duration === "medium"
+                    ? "12 weeks"
+                    : "24 weeks"}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -226,6 +321,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   bodyTypeButtonTextSelected: {
+    color: "#fff",
+  },
+  goalTypeContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  goalTypeButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    marginHorizontal: 4,
+    alignItems: "center",
+  },
+  goalTypeButtonSelected: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
+  goalTypeButtonText: {
+    color: "#333",
+    fontSize: 14,
+  },
+  goalTypeButtonTextSelected: {
+    color: "#fff",
+  },
+  durationContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  durationButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    marginHorizontal: 4,
+    alignItems: "center",
+  },
+  durationButtonSelected: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
+  durationButtonText: {
+    color: "#333",
+    fontSize: 14,
+  },
+  durationButtonTextSelected: {
     color: "#fff",
   },
   saveButton: {
