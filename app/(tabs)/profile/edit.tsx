@@ -110,47 +110,65 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!validateInputs()) return;
+    console.log("[Save] Starting save process");
+    if (!validateInputs()) {
+      console.log("[Save] Validation failed");
+      return;
+    }
 
+    setLoading(true);
     try {
-      setLoading(true);
+      console.log("[Save] Preparing data");
       setError("");
 
       const userId = auth.currentUser?.uid;
-      if (!userId) throw new Error("No authenticated user found");
+      if (!userId) {
+        console.log("[Save] No user ID found");
+        throw new Error("No authenticated user found");
+      }
 
       const heightNum = Number(height);
       const weightNum = Number(weight);
       const bmi = calculateBMI(weightNum, heightNum);
+      console.log("[Save] BMI calculated:", bmi);
 
-      // Check if goal type has changed
-      if (selectedGoalType !== user?.goals?.[0]?.type) {
-        const confirmed = await new Promise((resolve) => {
-          Alert.alert(
-            "Change Goal?",
-            "Changing your goal will reset your current goal progress. Your workout history and achievements will be preserved, but the home page will focus on your new goal progress.\n\nAre you sure you want to continue?",
-            [
-              {
-                text: "Cancel",
-                style: "cancel",
-                onPress: () => resolve(false),
-              },
-              {
-                text: "Continue",
-                style: "destructive",
-                onPress: () => resolve(true),
-              },
-            ]
-          );
-        });
+      // // Check if goal type has changed
+      // if (selectedGoalType !== user?.goals?.[0]?.type) {
+      //   console.log("[Save] Goal type changed, showing confirmation");
+      //   const confirmed = await new Promise((resolve) => {
+      //     Alert.alert(
+      //       "Change Goal?",
+      //       "Changing your goal will reset your current goal progress. Your workout history and achievements will be preserved, but the home page will focus on your new goal progress.\n\nAre you sure you want to continue?",
+      //       [
+      //         {
+      //           text: "Cancel",
+      //           style: "cancel",
+      //           onPress: () => {
+      //             console.log("[Save] Goal change cancelled");
+      //             resolve(false);
+      //           },
+      //         },
+      //         {
+      //           text: "Continue",
+      //           style: "destructive",
+      //           onPress: () => {
+      //             console.log("[Save] Goal change confirmed");
+      //             resolve(true);
+      //           },
+      //         },
+      //       ]
+      //     );
+      //   });
 
-        if (!confirmed) {
-          setLoading(false);
-          return;
-        }
-      }
+      //   console.log("[Save] Confirmation result:", confirmed);
+      //   if (!confirmed) {
+      //     console.log("[Save] Process cancelled by user");
+      //     setLoading(false);
+      //     return;
+      //   }
+      // }
 
-      // Prepare the goal with deadline
+      console.log("[Save] Preparing updates");
       const goal = selectedGoalType
         ? {
             type: selectedGoalType,
@@ -161,6 +179,7 @@ export default function EditProfileScreen() {
           }
         : null;
 
+      console.log("[Save] Constructed goal object:", goal);
       const updates = {
         "profile.height": heightNum,
         "profile.weight": weightNum,
@@ -169,16 +188,20 @@ export default function EditProfileScreen() {
         goals: goal ? [goal] : [],
         updatedAt: Timestamp.fromDate(new Date()),
       };
+      console.log("[Save] Update payload prepared:", updates);
 
+      console.log("[Save] Starting Firestore update");
       const userRef = doc(usersCollection, userId);
       await updateDoc(userRef, updates);
+      console.log("[Save] Firestore update completed");
 
-      // Navigate back after successful update
+      console.log("[Save] Navigating back");
       router.back();
     } catch (err) {
-      console.error("Error saving profile:", err);
+      console.error("[Save] Error:", err);
       setError("Failed to save changes. Please try again.");
     } finally {
+      console.log("[Save] Process completed");
       setLoading(false);
     }
   };
