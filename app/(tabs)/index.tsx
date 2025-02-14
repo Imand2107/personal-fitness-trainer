@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getCurrentUser } from "../../src/services/auth";
 import { getUserWorkouts } from "../../src/services/workout";
@@ -64,14 +64,18 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState(0);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState<Progress[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
 
   const loadUserData = async () => {
     try {
+      setLoading(true);
       const currentUser = await getCurrentUser();
       if (!currentUser) {
         router.replace("/(auth)/login");
@@ -363,30 +367,44 @@ export default function HomeScreen() {
       {/* Progress Summary */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Progress Summary</Text>
-        {Object.entries(latestProgress).map(([type, progress]) => (
-          <View key={type} style={styles.progressCard}>
-            <View style={styles.progressHeader}>
-              <Ionicons
-                name={
-                  type === "weight"
-                    ? "scale"
-                    : type === "strength"
-                    ? "barbell"
-                    : "pulse"
-                }
-                size={24}
-                color="#007AFF"
-              />
-              <Text style={styles.progressType}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+        {Object.keys(latestProgress).length > 0 ? (
+          Object.entries(latestProgress).map(([type, progress]) => (
+            <View key={type} style={styles.progressCard}>
+              <View style={styles.progressHeader}>
+                <Ionicons
+                  name={
+                    type === "weight"
+                      ? "scale"
+                      : type === "strength"
+                      ? "barbell"
+                      : "pulse"
+                  }
+                  size={24}
+                  color="#007AFF"
+                />
+                <Text style={styles.progressType}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </View>
+              <Text style={styles.progressValue}>{progress.value}</Text>
+              <Text style={styles.progressDate}>
+                {progress.date.toDate().toLocaleDateString()}
               </Text>
             </View>
-            <Text style={styles.progressValue}>{progress.value}</Text>
-            <Text style={styles.progressDate}>
-              {progress.date.toDate().toLocaleDateString()}
+          ))
+        ) : (
+          <View style={styles.noProgressCard}>
+            <Ionicons
+              name="fitness-outline"
+              size={24}
+              color={COLORS.textSecondary}
+            />
+            <Text style={styles.noProgressText}>No recent progress</Text>
+            <Text style={styles.noProgressSubtext}>
+              Complete workouts to track your progress
             </Text>
           </View>
-        ))}
+        )}
       </View>
     </ScrollView>
   );
@@ -681,5 +699,26 @@ const styles = StyleSheet.create({
   achievementDate: {
     fontSize: 12,
     color: COLORS.primary,
+  },
+  noProgressCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginTop: 8,
+  },
+  noProgressText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: COLORS.textSecondary,
+    marginTop: 8,
+  },
+  noProgressSubtext: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+    textAlign: "center",
   },
 });
