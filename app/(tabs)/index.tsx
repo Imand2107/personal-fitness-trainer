@@ -16,6 +16,20 @@ import { User, Workout, Progress, GoalType } from "../../src/types";
 
 const { width } = Dimensions.get("window");
 
+const COLORS = {
+  primary: "#FF6B6B", // Warm red
+  primaryDark: "#E85D5D", // Darker shade of primary
+  primaryLight: "#FF8787", // Lighter shade of primary
+  secondary: "#FFB84C", // Warm orange for accents
+  success: "#51CF66", // Green for completed states
+  background: "#FFF9F9", // Slightly warm white
+  card: "#FFFFFF",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+  divider: "#FFE5E5",
+};
+
 export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [recentWorkouts, setRecentWorkouts] = useState<Workout[]>([]);
@@ -184,7 +198,7 @@ export default function HomeScreen() {
       <View style={[styles.statsContainer, styles.elevatedCard]}>
         <View style={styles.statCard}>
           <View style={styles.statIconContainer}>
-            <Ionicons name="flame" size={24} color="#FF9500" />
+            <Ionicons name="flame-outline" size={24} color={COLORS.primary} />
           </View>
           <Text style={styles.statValue}>{streak}</Text>
           <Text style={styles.statLabel}>Day Streak</Text>
@@ -192,7 +206,7 @@ export default function HomeScreen() {
         <View style={styles.statDivider} />
         <View style={styles.statCard}>
           <View style={styles.statIconContainer}>
-            <Ionicons name="time" size={24} color="#30B0C7" />
+            <Ionicons name="time-outline" size={24} color={COLORS.primary} />
           </View>
           <Text style={styles.statValue}>{totalMinutes}</Text>
           <Text style={styles.statLabel}>Total Minutes</Text>
@@ -200,7 +214,7 @@ export default function HomeScreen() {
         <View style={styles.statDivider} />
         <View style={styles.statCard}>
           <View style={styles.statIconContainer}>
-            <Ionicons name="trophy" size={24} color="#FFD700" />
+            <Ionicons name="trophy" size={24} color={COLORS.primary} />
           </View>
           <Text style={styles.statValue}>
             {recentWorkouts.filter((w) => w.completed).length}
@@ -243,7 +257,7 @@ export default function HomeScreen() {
           style={styles.actionButton}
           onPress={() => router.push("/(tabs)/workout")}
         >
-          <Ionicons name="play-circle" size={24} color="#007AFF" />
+          <Ionicons name="play-circle" size={24} color="#FF6B6B" />
           <Text style={styles.actionText}>Start Workout</Text>
         </TouchableOpacity>
 
@@ -251,7 +265,7 @@ export default function HomeScreen() {
           style={styles.actionButton}
           onPress={() => router.push("/(tabs)/profile/edit")}
         >
-          <Ionicons name="analytics" size={24} color="#007AFF" />
+          <Ionicons name="analytics" size={24} color="#FF6B6B" />
           <Text style={styles.actionText}>Update Goals</Text>
         </TouchableOpacity>
       </View>
@@ -326,13 +340,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.background,
   },
   header: {
     padding: 20,
     paddingTop: 60,
     paddingBottom: 40,
-    backgroundColor: "#007AFF",
+    backgroundColor: COLORS.primary,
   },
   headerTop: {
     flexDirection: "row",
@@ -344,13 +358,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   welcomeText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 16,
     opacity: 0.9,
     marginBottom: 4,
   },
   userName: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 28,
     fontWeight: "bold",
   },
@@ -373,11 +387,11 @@ const styles = StyleSheet.create({
   },
   weekProgressFill: {
     height: 6,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 3,
   },
   weekText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 14,
     opacity: 0.9,
   },
@@ -385,14 +399,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 24,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     marginTop: -30,
     marginHorizontal: 20,
     marginBottom: 24,
   },
   elevatedCard: {
-    shadowColor: "#000",
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -406,7 +420,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -414,17 +428,17 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#1c1c1e",
+    color: COLORS.text,
   },
   statLabel: {
     fontSize: 13,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginTop: 4,
   },
   statDivider: {
     width: 1,
     height: "80%",
-    backgroundColor: "#E5E5EA",
+    backgroundColor: COLORS.divider,
     marginHorizontal: 8,
   },
   section: {
@@ -439,16 +453,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
+    color: COLORS.text,
   },
   seeAllButton: {
-    color: "#007AFF",
+    color: COLORS.primary,
     fontSize: 14,
   },
   goalCard: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   goalHeader: {
     flexDirection: "row",
@@ -459,26 +476,27 @@ const styles = StyleSheet.create({
   goalType: {
     fontSize: 16,
     fontWeight: "600",
+    color: COLORS.text,
   },
   goalProgress: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#007AFF",
+    color: COLORS.primary,
   },
   progressBar: {
     height: 6,
-    backgroundColor: "#E9ECEF",
+    backgroundColor: COLORS.background,
     borderRadius: 3,
     marginBottom: 8,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#007AFF",
+    backgroundColor: COLORS.primary,
     borderRadius: 3,
   },
   goalDeadline: {
     fontSize: 12,
-    color: "#666",
+    color: COLORS.textSecondary,
   },
   quickActions: {
     flexDirection: "row",
@@ -487,14 +505,16 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.card,
     padding: 15,
     borderRadius: 10,
     width: "45%",
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   actionText: {
     marginTop: 8,
-    color: "#007AFF",
+    color: COLORS.primary,
     fontWeight: "500",
   },
   workoutCard: {
@@ -502,9 +522,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 15,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.card,
     borderRadius: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   workoutInfo: {
     flex: 1,
@@ -512,21 +534,24 @@ const styles = StyleSheet.create({
   workoutDate: {
     fontWeight: "500",
     fontSize: 16,
+    color: COLORS.text,
     marginBottom: 4,
   },
   workoutExercises: {
-    color: "#666",
+    color: COLORS.textSecondary,
   },
   completedBadge: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: COLORS.success,
     borderRadius: 12,
     padding: 4,
   },
   progressCard: {
     padding: 16,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   progressHeader: {
     flexDirection: "row",
@@ -537,20 +562,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,
+    color: COLORS.text,
     textTransform: "capitalize",
   },
   progressValue: {
     fontSize: 24,
     fontWeight: "bold",
     marginVertical: 4,
+    color: COLORS.text,
   },
   progressDate: {
     fontSize: 12,
-    color: "#666",
+    color: COLORS.textSecondary,
   },
   emptyText: {
     textAlign: "center",
-    color: "#666",
+    color: COLORS.textSecondary,
     marginTop: 10,
     fontStyle: "italic",
   },

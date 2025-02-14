@@ -2,20 +2,30 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, Platform } from "react-native";
 
+const COLORS = {
+  primary: "#FF6B6B",
+  primaryDark: "#E85D5D",
+  primaryLight: "#FF8787",
+  background: "#FFF9F9",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+};
+
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#007AFF",
-        tabBarInactiveTintColor: "#8E8E93",
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
         tabBarStyle: {
           height: Platform.OS === "ios" ? 110 : 90,
           paddingBottom: Platform.OS === "ios" ? 30 : 10,
-          backgroundColor: "#fff",
+          backgroundColor: COLORS.background,
           borderTopWidth: 1,
-          borderTopColor: "#E5E5EA",
-          shadowColor: "#000",
+          borderTopColor: COLORS.border,
+          shadowColor: COLORS.text,
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.05,
           shadowRadius: 4,

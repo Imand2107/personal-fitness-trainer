@@ -17,6 +17,21 @@ import { workoutPlans } from "../../../../assets/data/workouts";
 import { completeWorkout } from "../../../../src/services/workout";
 import { auth } from "../../../../firebase/config";
 
+// Add color constants at the top after imports
+const COLORS = {
+  primary: "#FF6B6B",
+  primaryDark: "#E85D5D",
+  primaryLight: "#FF8787",
+  secondary: "#FFB84C",
+  success: "#51CF66",
+  background: "#FFF9F9",
+  card: "#FFFFFF",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+  divider: "#FFE5E5",
+};
+
 export default function WorkoutSessionScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -240,7 +255,7 @@ export default function WorkoutSessionScreen() {
           <Ionicons
             name={isPaused ? "play-circle" : "pause-circle"}
             size={64}
-            color="#007AFF"
+            color={COLORS.primary}
           />
         </TouchableOpacity>
         <TouchableOpacity style={styles.quitButton} onPress={handleQuit}>
@@ -263,7 +278,7 @@ export default function WorkoutSessionScreen() {
               fadeOut={true}
             />
 
-            <Ionicons name="trophy" size={80} color="#FFD700" />
+            <Ionicons name="trophy" size={80} color={COLORS.secondary} />
             <Text style={styles.completionTitle}>Workout Complete!</Text>
             <Text style={styles.motivationalMessage}>
               {getMotivationalMessage()}
@@ -290,21 +305,21 @@ export default function WorkoutSessionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
   },
   timerSection: {
     alignItems: "center",
     paddingVertical: 40,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
   },
   timerText: {
     fontSize: 64,
     fontWeight: "bold",
-    color: "#007AFF",
+    color: COLORS.primary,
   },
   phaseText: {
     fontSize: 18,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginTop: 8,
   },
   exerciseSection: {
@@ -315,21 +330,21 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 12,
-    color: "#333",
+    color: COLORS.text,
   },
   exerciseDescription: {
     fontSize: 16,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 16,
     lineHeight: 24,
   },
   exerciseDetail: {
     fontSize: 16,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 16,
   },
   tipsContainer: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
     padding: 16,
     borderRadius: 12,
     marginTop: 8,
@@ -339,24 +354,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 8,
-    color: "#333",
+    color: COLORS.text,
   },
   tipText: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 4,
     lineHeight: 20,
   },
   nextUpContainer: {
     marginTop: 16,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
     borderRadius: 12,
     padding: 16,
   },
   nextUpTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#333",
+    color: COLORS.text,
     marginBottom: 12,
   },
   nextExerciseCard: {
@@ -375,17 +390,17 @@ const styles = StyleSheet.create({
   nextExerciseName: {
     fontSize: 18,
     fontWeight: "500",
-    color: "#333",
+    color: COLORS.text,
     marginBottom: 4,
   },
   nextExerciseDetail: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 4,
   },
   nextExerciseDescription: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
     lineHeight: 20,
   },
   controlsSection: {
@@ -410,12 +425,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   completionCard: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 20,
     padding: 24,
     alignItems: "center",
     width: "85%",
-    shadowColor: "#000",
+    shadowColor: COLORS.primary,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -427,31 +442,31 @@ const styles = StyleSheet.create({
   completionTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#333",
+    color: COLORS.text,
     marginTop: 16,
     marginBottom: 8,
   },
   motivationalMessage: {
     fontSize: 18,
-    color: "#007AFF",
+    color: COLORS.primary,
     textAlign: "center",
     marginBottom: 16,
   },
   completionStats: {
     fontSize: 16,
-    color: "#666",
+    color: COLORS.textSecondary,
     textAlign: "center",
     lineHeight: 24,
     marginBottom: 24,
   },
   closeButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 25,
   },
   closeButtonText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 16,
     fontWeight: "600",
   },

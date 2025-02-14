@@ -12,6 +12,20 @@ import { getCurrentUser } from "../../../src/services/auth";
 import { User } from "../../../src/types";
 import { Timestamp } from "firebase/firestore";
 
+const COLORS = {
+  primary: "#FF6B6B",
+  primaryDark: "#E85D5D",
+  primaryLight: "#FF8787",
+  secondary: "#FFB84C",
+  success: "#51CF66",
+  background: "#FFF9F9",
+  card: "#FFFFFF",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+  divider: "#FFE5E5",
+};
+
 export default function ProfileScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,10 +152,10 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: "#007AFF",
+    backgroundColor: COLORS.primary,
     padding: 20,
     alignItems: "center",
   },
@@ -157,24 +171,24 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#fff",
+    color: COLORS.card,
     marginBottom: 5,
   },
   email: {
     fontSize: 16,
-    color: "#fff",
+    color: COLORS.card,
     opacity: 0.8,
   },
   section: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: COLORS.border,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 15,
-    color: "#333",
+    color: COLORS.text,
   },
   infoRow: {
     flexDirection: "row",
@@ -183,49 +197,51 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: "#666",
+    color: COLORS.textSecondary,
   },
   value: {
     fontSize: 16,
-    color: "#333",
+    color: COLORS.text,
     fontWeight: "500",
   },
   goalCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.card,
     padding: 15,
     borderRadius: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   goalType: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#333",
+    color: COLORS.text,
   },
   goalTarget: {
-    color: "#666",
+    color: COLORS.textSecondary,
     marginTop: 4,
   },
   goalDeadline: {
-    color: "#666",
+    color: COLORS.textSecondary,
     fontSize: 14,
   },
   emptyText: {
     textAlign: "center",
-    color: "#666",
+    color: COLORS.textSecondary,
     fontStyle: "italic",
   },
   editButton: {
     margin: 20,
     padding: 15,
-    backgroundColor: "#007AFF",
+    backgroundColor: COLORS.primary,
     borderRadius: 8,
     alignItems: "center",
   },
   editButtonText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 16,
     fontWeight: "bold",
   },

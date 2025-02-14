@@ -11,6 +11,21 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { workoutPlans } from "../../../assets/data/workouts";
 
+// Add color constants at the top after imports
+const COLORS = {
+  primary: "#FF6B6B",
+  primaryDark: "#E85D5D",
+  primaryLight: "#FF8787",
+  secondary: "#FFB84C",
+  success: "#51CF66",
+  background: "#FFF9F9",
+  card: "#FFFFFF",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+  divider: "#FFE5E5",
+};
+
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -33,15 +48,15 @@ export default function WorkoutDetailScreen() {
 
         <View style={styles.stats}>
           <View style={styles.statItem}>
-            <Ionicons name="time-outline" size={20} color="#666" />
+            <Ionicons name="time-outline" size={20} color={COLORS.primary} />
             <Text style={styles.statText}>{workout.duration} min</Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="flame-outline" size={20} color="#666" />
+            <Ionicons name="flame-outline" size={20} color={COLORS.primary} />
             <Text style={styles.statText}>{workout.calories} cal</Text>
           </View>
           <View style={styles.statItem}>
-            <Ionicons name="barbell-outline" size={20} color="#666" />
+            <Ionicons name="barbell-outline" size={20} color={COLORS.primary} />
             <Text style={styles.statText}>
               {workout.difficulty.charAt(0).toUpperCase() +
                 workout.difficulty.slice(1)}
@@ -56,7 +71,11 @@ export default function WorkoutDetailScreen() {
           {workout.equipmentNeeded.length > 0 ? (
             workout.equipmentNeeded.map((equipment, index) => (
               <View key={index} style={styles.equipmentItem}>
-                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={COLORS.success}
+                />
                 <Text style={styles.equipmentText}>{equipment}</Text>
               </View>
             ))
@@ -122,34 +141,36 @@ export default function WorkoutDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.background,
   },
   header: {
     padding: 20,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 8,
-    color: "#333",
+    color: COLORS.text,
   },
   description: {
     fontSize: 16,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 16,
   },
   stats: {
     flexDirection: "row",
     justifyContent: "space-around",
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   statItem: {
     alignItems: "center",
@@ -157,7 +178,7 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
   },
   section: {
     padding: 20,
@@ -166,7 +187,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 16,
-    color: "#333",
+    color: COLORS.text,
   },
   equipmentList: {
     gap: 8,
@@ -178,23 +199,25 @@ const styles = StyleSheet.create({
   },
   equipmentText: {
     fontSize: 16,
-    color: "#333",
+    color: COLORS.text,
   },
   noEquipment: {
     fontSize: 16,
-    color: "#666",
+    color: COLORS.textSecondary,
     fontStyle: "italic",
   },
   exerciseCard: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   exerciseHeader: {
     marginBottom: 8,
@@ -203,19 +226,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
-    color: "#333",
+    color: COLORS.text,
   },
   exerciseDetail: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
   },
   exerciseDescription: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 12,
   },
   tipsContainer: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
     borderRadius: 8,
     padding: 12,
   },
@@ -223,18 +246,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
-    color: "#333",
+    color: COLORS.text,
   },
   tipText: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 4,
   },
   startSection: {
     padding: 20,
   },
   startButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: COLORS.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -243,7 +266,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   startButtonText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 16,
     fontWeight: "600",
   },

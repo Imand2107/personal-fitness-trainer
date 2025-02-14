@@ -11,6 +11,20 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { workoutPlans } from "../../../assets/data/workouts";
 
+const COLORS = {
+  primary: "#FF6B6B",
+  primaryDark: "#E85D5D",
+  primaryLight: "#FF8787",
+  secondary: "#FFB84C",
+  success: "#51CF66",
+  background: "#FFF9F9",
+  card: "#FFFFFF",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+  divider: "#FFE5E5",
+};
+
 export default function QuickStartScreen() {
   const router = useRouter();
   // Select a random beginner-friendly workout
@@ -177,7 +191,7 @@ export default function QuickStartScreen() {
           <Ionicons
             name={isPaused ? "play-circle" : "pause-circle"}
             size={64}
-            color="#007AFF"
+            color={COLORS.primary}
           />
         </TouchableOpacity>
         <TouchableOpacity style={styles.quitButton} onPress={handleQuit}>
@@ -191,21 +205,21 @@ export default function QuickStartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
   },
   timerSection: {
     alignItems: "center",
     paddingVertical: 40,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
   },
   timerText: {
     fontSize: 64,
     fontWeight: "bold",
-    color: "#007AFF",
+    color: COLORS.primary,
   },
   phaseText: {
     fontSize: 18,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginTop: 8,
   },
   exerciseSection: {

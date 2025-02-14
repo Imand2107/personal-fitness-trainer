@@ -13,6 +13,20 @@ import { getCurrentUser } from "../../../src/services/auth";
 import { User, Goal } from "../../../src/types";
 import { workoutPlans } from "../../../assets/data/workouts";
 
+const COLORS = {
+  primary: "#FF6B6B",
+  primaryDark: "#E85D5D",
+  primaryLight: "#FF8787",
+  secondary: "#FFB84C",
+  success: "#51CF66",
+  background: "#FFF9F9",
+  card: "#FFFFFF",
+  text: "#2D3436",
+  textSecondary: "#636E72",
+  border: "#FFE5E5",
+  divider: "#FFE5E5",
+};
+
 export default function WorkoutScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +101,7 @@ export default function WorkoutScreen() {
               <Ionicons
                 name={getGoalIcon(currentGoal.type)}
                 size={24}
-                color="#007AFF"
+                color={COLORS.primary}
               />
               <Text style={styles.goalType}>
                 {currentGoal.type.charAt(0).toUpperCase() +
@@ -126,13 +140,21 @@ export default function WorkoutScreen() {
                 </Text>
                 <View style={styles.workoutDetails}>
                   <View style={styles.detailItem}>
-                    <Ionicons name="time-outline" size={16} color="#666" />
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={COLORS.primary}
+                    />
                     <Text style={styles.detailText}>
                       {workout.duration} min
                     </Text>
                   </View>
                   <View style={styles.detailItem}>
-                    <Ionicons name="flame-outline" size={16} color="#666" />
+                    <Ionicons
+                      name="flame-outline"
+                      size={16}
+                      color={COLORS.primary}
+                    />
                     <Text style={styles.detailText}>
                       {workout.calories} calories
                     </Text>
@@ -141,7 +163,7 @@ export default function WorkoutScreen() {
                     <Ionicons
                       name="speedometer-outline"
                       size={16}
-                      color="#666"
+                      color={COLORS.primary}
                     />
                     <Text style={styles.detailText}>
                       {workout.difficulty.charAt(0).toUpperCase() +
@@ -153,7 +175,7 @@ export default function WorkoutScreen() {
               <Ionicons
                 name="chevron-forward-outline"
                 size={24}
-                color="#007AFF"
+                color={COLORS.primary}
               />
             </TouchableOpacity>
           ))
@@ -182,27 +204,29 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.background,
   },
   goalSection: {
     padding: 20,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: COLORS.background,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 15,
-    color: "#333",
+    color: COLORS.text,
   },
   goalCard: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   goalHeader: {
     flexDirection: "row",
@@ -213,15 +237,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginLeft: 8,
-    color: "#333",
+    color: COLORS.text,
   },
   goalDeadline: {
-    color: "#666",
+    color: COLORS.textSecondary,
     fontSize: 14,
   },
   noGoal: {
     textAlign: "center",
-    color: "#666",
+    color: COLORS.textSecondary,
     fontStyle: "italic",
   },
   workoutsSection: {
@@ -230,15 +254,17 @@ const styles = StyleSheet.create({
   workoutCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   workoutInfo: {
     flex: 1,
@@ -247,11 +273,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
-    color: "#333",
+    color: COLORS.text,
   },
   workoutDescription: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 8,
   },
   workoutDetails: {
@@ -266,11 +292,11 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: "#666",
+    color: COLORS.textSecondary,
   },
   noWorkouts: {
     textAlign: "center",
-    color: "#666",
+    color: COLORS.textSecondary,
     fontStyle: "italic",
     marginTop: 20,
   },
@@ -279,7 +305,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   quickStartButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: COLORS.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -288,7 +314,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickStartText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 16,
     fontWeight: "600",
   },
