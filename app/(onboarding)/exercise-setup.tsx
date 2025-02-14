@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  SafeAreaView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
@@ -128,68 +129,85 @@ export default function ExerciseSetupScreen() {
   const recommendedExercises = getRecommendedExercises();
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Customize Your Workout</Text>
-      <Text style={styles.subtitle}>
-        Select exercises that match your fitness level and preferences.
-        {"\n"}Choose at least 3 exercises to continue.
-      </Text>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <View style={styles.exercisesGrid}>
-        {recommendedExercises.map((exercise: Exercise) => (
-          <TouchableOpacity
-            key={exercise.id}
-            style={[
-              styles.exerciseCard,
-              selectedExercises.includes(exercise.id) && styles.selectedCard,
-            ]}
-            onPress={() => handleExerciseToggle(exercise.id)}
-          >
-            <Image
-              source={getExerciseImage(exercise.id)}
-              style={styles.exerciseImage}
-              resizeMode="cover"
-            />
-            <View style={styles.exerciseInfo}>
-              <Text style={styles.exerciseName}>{exercise.name}</Text>
-              <Text style={styles.exerciseDetail}>
-                {exercise.duration}s • {exercise.difficulty}
-              </Text>
-              <View style={styles.targetMuscles}>
-                {exercise.targetMuscles.map((muscle, index) => (
-                  <Text key={index} style={styles.muscle}>
-                    {muscle}
-                  </Text>
-                ))}
-              </View>
-              {exercise.tips.length > 0 && (
-                <Text style={styles.tips}>Tip: {exercise.tips[0]}</Text>
-              )}
-            </View>
-            {selectedExercises.includes(exercise.id) && (
-              <View style={styles.checkmark}>
-                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Text style={styles.backButtonText}>Goals</Text>
+        </TouchableOpacity>
+        <View style={styles.progressIndicator}>
+          <View style={[styles.progressDot, styles.progressDotCompleted]} />
+          <View style={[styles.progressDot, styles.progressDotCompleted]} />
+          <View style={[styles.progressDot, styles.progressDotActive]} />
+        </View>
       </View>
 
-      <TouchableOpacity
-        style={[
-          styles.button,
-          (selectedExercises.length < 3 || loading) && styles.buttonDisabled,
-        ]}
-        onPress={handleNext}
-        disabled={selectedExercises.length < 3 || loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? "Saving..." : "Complete Setup"}
+      <ScrollView style={styles.scrollContent}>
+        <Text style={styles.title}>Customize Your Workout</Text>
+        <Text style={styles.subtitle}>
+          Select exercises that match your fitness level and preferences.
+          {"\n"}Choose at least 3 exercises to continue.
         </Text>
-      </TouchableOpacity>
-    </ScrollView>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <View style={styles.exercisesGrid}>
+          {recommendedExercises.map((exercise: Exercise) => (
+            <TouchableOpacity
+              key={exercise.id}
+              style={[
+                styles.exerciseCard,
+                selectedExercises.includes(exercise.id) && styles.selectedCard,
+              ]}
+              onPress={() => handleExerciseToggle(exercise.id)}
+            >
+              <Image
+                source={getExerciseImage(exercise.id)}
+                style={styles.exerciseImage}
+                resizeMode="cover"
+              />
+              <View style={styles.exerciseInfo}>
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exerciseDetail}>
+                  {exercise.duration}s • {exercise.difficulty}
+                </Text>
+                <View style={styles.targetMuscles}>
+                  {exercise.targetMuscles.map((muscle, index) => (
+                    <Text key={index} style={styles.muscle}>
+                      {muscle}
+                    </Text>
+                  ))}
+                </View>
+                {exercise.tips.length > 0 && (
+                  <Text style={styles.tips}>Tip: {exercise.tips[0]}</Text>
+                )}
+              </View>
+              {selectedExercises.includes(exercise.id) && (
+                <View style={styles.checkmark}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.button,
+            (selectedExercises.length < 3 || loading) && styles.buttonDisabled,
+          ]}
+          onPress={handleNext}
+          disabled={selectedExercises.length < 3 || loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Saving..." : "Complete Setup"}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -197,6 +215,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+  },
+  backButtonText: {
+    color: "#007AFF",
+    fontSize: 16,
+    marginLeft: 4,
+  },
+  progressIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#E0E0E0",
+  },
+  progressDotCompleted: {
+    backgroundColor: "#4CAF50",
+  },
+  progressDotActive: {
+    backgroundColor: "#2196f3",
+  },
+  scrollContent: {
+    flex: 1,
     padding: 20,
   },
   title: {
