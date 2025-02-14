@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,219 +6,208 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  SafeAreaView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
-import { auth, usersCollection } from "../../firebase/config";
+import { auth, db } from "../../firebase/config";
 import { Ionicons } from "@expo/vector-icons";
+import { commonExercises } from "../../assets/data/workouts";
+import { Exercise, GoalType } from "../../src/types/workout";
+import { useAuth } from "../../src/hooks/useAuth";
 
-interface Exercise {
-  id: string;
-  name: string;
-  category: string;
-  difficulty: "beginner" | "intermediate" | "advanced";
-  equipment: string[];
-  muscles: string[];
-}
+// Helper function to get exercise image
+const getExerciseImage = (exerciseId: string) => {
+  const imageMap: { [key: string]: any } = {
+    jumping_jacks: require("../../assets/images/exercises/jumping-jacks.gif"),
+    high_knees: require("../../assets/images/exercises/high-knees.gif"),
+    mountain_climbers: require("../../assets/images/exercises/mountain-climbers.gif"),
+    pushups: require("../../assets/images/exercises/pushup.gif"),
+    wide_arm_pushups: require("../../assets/images/exercises/wide-arm-push-up.gif"),
+    diamond_pushups: require("../../assets/images/exercises/Diamond_Push-Up.gif"),
+    plank: require("../../assets/images/exercises/plank.jpg"),
+    russian_twist: require("../../assets/images/exercises/russian-twist.gif"),
+    leg_raises: require("../../assets/images/exercises/leg-raises.gif"),
+    squats: require("../../assets/images/exercises/squats.gif"),
+    lunges: require("../../assets/images/exercises/lunges.gif"),
+    burpees: require("../../assets/images/exercises/burpee.webp"),
+  };
 
-const sampleExercises: Exercise[] = [
-  {
-    id: "1",
-    name: "Push-ups",
-    category: "Strength",
-    difficulty: "beginner",
-    equipment: ["none"],
-    muscles: ["chest", "shoulders", "triceps"],
-  },
-  {
-    id: "2",
-    name: "Squats",
-    category: "Strength",
-    difficulty: "beginner",
-    equipment: ["none"],
-    muscles: ["quadriceps", "hamstrings", "glutes"],
-  },
-  {
-    id: "3",
-    name: "Plank",
-    category: "Core",
-    difficulty: "beginner",
-    equipment: ["none"],
-    muscles: ["core", "shoulders"],
-  },
-  // Add more exercises as needed
-];
+  return (
+    imageMap[exerciseId] || require("../../assets/images/exercises/plank.jpg")
+  ); // Default image
+};
 
 export default function ExerciseSetupScreen() {
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { user } = useAuth();
+  const [userGoal, setUserGoal] = useState<GoalType>("weight");
 
-  const toggleExercise = (exerciseId: string) => {
-    setSelectedExercises((prev) =>
-      prev.includes(exerciseId)
-        ? prev.filter((id) => id !== exerciseId)
-        : [...prev, exerciseId]
-    );
+  useEffect(() => {
+    // Fetch user's goal from Firestore
+    const fetchUserGoal = async () => {
+      if (!user) return;
+      // Add logic to fetch user's goal from Firestore
+    };
+    fetchUserGoal();
+  }, [user]);
+
+  const getRecommendedExercises = () => {
+    const exercises = Object.values(commonExercises);
+
+    switch (userGoal) {
+      case "weight":
+        return exercises.filter(
+          (exercise) =>
+            exercise.targetMuscles.includes("cardio") ||
+            exercise.difficulty === "beginner" ||
+            exercise.targetMuscles.includes("full_body")
+        );
+      case "strength":
+        return exercises.filter(
+          (exercise) =>
+            (exercise.sets && exercise.reps) ||
+            exercise.targetMuscles.some((muscle) =>
+              [
+                "chest",
+                "shoulders",
+                "triceps",
+                "quadriceps",
+                "hamstrings",
+                "glutes",
+              ].includes(muscle)
+            )
+        );
+      case "stamina":
+        return exercises.filter(
+          (exercise) =>
+            exercise.targetMuscles.includes("cardio") ||
+            exercise.targetMuscles.includes("full_body") ||
+            exercise.duration >= 30
+        );
+      default:
+        return exercises;
+    }
   };
 
-  const handleComplete = async () => {
+  const handleExerciseToggle = (exerciseId: string) => {
+    setSelectedExercises((prev) => {
+      if (prev.includes(exerciseId)) {
+        return prev.filter((id) => id !== exerciseId);
+      }
+      return [...prev, exerciseId];
+    });
+  };
+
+  const handleNext = async () => {
     if (selectedExercises.length < 3) {
       setError("Please select at least 3 exercises");
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
-      setError("");
+      if (!user) throw new Error("No user found");
 
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        throw new Error("No authenticated user found");
-      }
-
-      const exercises = sampleExercises.filter((ex) =>
-        selectedExercises.includes(ex.id)
-      );
-
-      await updateDoc(doc(usersCollection, userId), {
-        "profile.onboardingCompleted": true,
-        selectedExercises: exercises,
+      await updateDoc(doc(db, "users", user.uid), {
+        selectedExercises,
+        onboardingCompleted: true,
       });
 
       router.replace("/(tabs)");
     } catch (err) {
-      console.error("Error saving exercise preferences:", err);
-      setError("Failed to save your preferences. Please try again.");
+      setError("Failed to save exercises. Please try again.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  const recommendedExercises = getRecommendedExercises();
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Customize Your Workout</Text>
-      <Text style={styles.subtitle}>
-        Select exercises that match your fitness level and goals
-      </Text>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <View style={styles.exerciseList}>
-        {sampleExercises.map((exercise) => (
-          <TouchableOpacity
-            key={exercise.id}
-            style={[
-              styles.exerciseCard,
-              selectedExercises.includes(exercise.id) && styles.selectedCard,
-            ]}
-            onPress={() => toggleExercise(exercise.id)}
-          >
-            <View style={styles.exerciseHeader}>
-              <View>
-                <Text
-                  style={[
-                    styles.exerciseName,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  {exercise.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.exerciseCategory,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  {exercise.category}
-                </Text>
-              </View>
-              {selectedExercises.includes(exercise.id) && (
-                <Ionicons name="checkmark-circle" size={24} color="#fff" />
-              )}
-            </View>
-
-            <View style={styles.exerciseDetails}>
-              <View style={styles.detailItem}>
-                <Text
-                  style={[
-                    styles.detailLabel,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  Difficulty:
-                </Text>
-                <Text
-                  style={[
-                    styles.detailValue,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  {exercise.difficulty}
-                </Text>
-              </View>
-
-              <View style={styles.detailItem}>
-                <Text
-                  style={[
-                    styles.detailLabel,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  Equipment:
-                </Text>
-                <Text
-                  style={[
-                    styles.detailValue,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  {exercise.equipment.join(", ")}
-                </Text>
-              </View>
-
-              <View style={styles.detailItem}>
-                <Text
-                  style={[
-                    styles.detailLabel,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  Muscles:
-                </Text>
-                <Text
-                  style={[
-                    styles.detailValue,
-                    selectedExercises.includes(exercise.id) &&
-                      styles.selectedText,
-                  ]}
-                >
-                  {exercise.muscles.join(", ")}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Text style={styles.backButtonText}>Goals</Text>
+        </TouchableOpacity>
+        <View style={styles.progressIndicator}>
+          <View style={[styles.progressDot, styles.progressDotCompleted]} />
+          <View style={[styles.progressDot, styles.progressDotCompleted]} />
+          <View style={[styles.progressDot, styles.progressDotActive]} />
+        </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleComplete}
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? "Saving..." : "Complete Setup"}
+      <ScrollView style={styles.scrollContent}>
+        <Text style={styles.title}>Customize Your Workout</Text>
+        <Text style={styles.subtitle}>
+          Select exercises that match your fitness level and preferences.
+          {"\n"}Choose at least 3 exercises to continue.
         </Text>
-      </TouchableOpacity>
-    </ScrollView>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <View style={styles.exercisesGrid}>
+          {recommendedExercises.map((exercise: Exercise) => (
+            <TouchableOpacity
+              key={exercise.id}
+              style={[
+                styles.exerciseCard,
+                selectedExercises.includes(exercise.id) && styles.selectedCard,
+              ]}
+              onPress={() => handleExerciseToggle(exercise.id)}
+            >
+              <Image
+                source={getExerciseImage(exercise.id)}
+                style={styles.exerciseImage}
+                resizeMode="cover"
+              />
+              <View style={styles.exerciseInfo}>
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exerciseDetail}>
+                  {exercise.duration}s • {exercise.difficulty}
+                </Text>
+                <View style={styles.targetMuscles}>
+                  {exercise.targetMuscles.map((muscle, index) => (
+                    <Text key={index} style={styles.muscle}>
+                      {muscle}
+                    </Text>
+                  ))}
+                </View>
+                {exercise.tips.length > 0 && (
+                  <Text style={styles.tips}>Tip: {exercise.tips[0]}</Text>
+                )}
+              </View>
+              {selectedExercises.includes(exercise.id) && (
+                <View style={styles.checkmark}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.button,
+            (selectedExercises.length < 3 || loading) && styles.buttonDisabled,
+          ]}
+          onPress={handleNext}
+          disabled={selectedExercises.length < 3 || loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Saving..." : "Complete Setup"}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -226,6 +215,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+  },
+  backButtonText: {
+    color: "#007AFF",
+    fontSize: 16,
+    marginLeft: 4,
+  },
+  progressIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#E0E0E0",
+  },
+  progressDotCompleted: {
+    backgroundColor: "#4CAF50",
+  },
+  progressDotActive: {
+    backgroundColor: "#2196f3",
+  },
+  scrollContent: {
+    flex: 1,
     padding: 20,
   },
   title: {
@@ -240,74 +268,84 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     textAlign: "center",
   },
-  exerciseList: {
-    marginBottom: 20,
+  exercisesGrid: {
+    gap: 16,
   },
   exerciseCard: {
-    backgroundColor: "#f8f9fa",
-    padding: 15,
+    flexDirection: "row",
+    backgroundColor: "#f5f5f5",
     borderRadius: 12,
-    marginBottom: 15,
+    padding: 12,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: "#e0e0e0",
   },
   selectedCard: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    backgroundColor: "#e3f2fd",
+    borderColor: "#2196f3",
   },
-  exerciseHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
+  exerciseImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  exerciseInfo: {
+    flex: 1,
   },
   exerciseName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
+    marginBottom: 4,
     color: "#333",
+  },
+  exerciseDetail: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 4,
   },
-  exerciseCategory: {
-    fontSize: 14,
-    color: "#666",
-  },
-  exerciseDetails: {
-    marginTop: 10,
-  },
-  detailItem: {
+  targetMuscles: {
     flexDirection: "row",
-    marginBottom: 5,
+    flexWrap: "wrap",
+    gap: 4,
+    marginBottom: 4,
   },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
-    marginRight: 5,
-  },
-  detailValue: {
-    fontSize: 14,
-    color: "#333",
-  },
-  selectedText: {
+  muscle: {
+    fontSize: 12,
     color: "#fff",
+    backgroundColor: "#9e9e9e",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  tips: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
+  },
+  checkmark: {
+    position: "absolute",
+    top: 8,
+    right: 8,
   },
   button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
+    backgroundColor: "#2196f3",
+    padding: 16,
     borderRadius: 8,
     alignItems: "center",
-    marginVertical: 20,
+    marginTop: 24,
+    marginBottom: 32,
   },
   buttonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#bdbdbd",
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
   },
   error: {
-    color: "#e74c3c",
+    color: "#f44336",
     marginBottom: 20,
     textAlign: "center",
   },

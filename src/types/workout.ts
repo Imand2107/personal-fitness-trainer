@@ -10,6 +10,8 @@ export type WorkoutCategory =
 
 export type DifficultyLevel = "beginner" | "intermediate" | "advanced";
 
+export type GoalType = "weight" | "strength" | "stamina";
+
 export interface Exercise {
   id: string;
   name: string;
@@ -38,6 +40,7 @@ export interface WorkoutPlan {
   equipmentNeeded: string[];
   targetMuscles: string[];
   calories: number; // estimated calories burned
+  goalType: GoalType; // the primary fitness goal this workout supports
 }
 
 // User's workout progress and preferences
