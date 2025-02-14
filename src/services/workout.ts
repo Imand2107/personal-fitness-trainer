@@ -71,15 +71,51 @@ export const deleteWorkout = async (workoutId: string): Promise<void> => {
   }
 };
 
-export const completeWorkout = async (workoutId: string): Promise<void> => {
+export const completeWorkout = async (
+  workoutId: string,
+  totalTimeElapsed: number,
+  caloriesBurned: number,
+  exercises: {
+    exerciseId: string;
+    sets?: number;
+    reps?: number;
+    duration?: number;
+  }[]
+): Promise<void> => {
   try {
     const workoutRef = doc(workoutsCollection, workoutId);
     await updateDoc(workoutRef, {
       completed: true,
-      completedAt: Timestamp.fromDate(new Date())
+      completedAt: Timestamp.fromDate(new Date()),
+      totalTimeElapsed,
+      caloriesBurned,
+      exercises,
+      updatedAt: Timestamp.fromDate(new Date())
     });
   } catch (error) {
     console.error('Error completing workout:', error);
+    throw error;
+  }
+};
+
+export const updateExerciseProgress = async (
+  workoutId: string,
+  exerciseIndex: number,
+  timeElapsed: number,
+  isCompleted: boolean
+): Promise<void> => {
+  try {
+    const workoutRef = doc(workoutsCollection, workoutId);
+    
+    // Update the workout document with the completed exercise
+    await updateDoc(workoutRef, {
+      [`exercises.${exerciseIndex}.completed`]: isCompleted,
+      [`exercises.${exerciseIndex}.timeElapsed`]: timeElapsed,
+      totalTimeElapsed: timeElapsed,
+      lastUpdated: Timestamp.fromDate(new Date())
+    });
+  } catch (error) {
+    console.error('Error updating exercise progress:', error);
     throw error;
   }
 }; 

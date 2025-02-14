@@ -6,6 +6,10 @@ export default function SessionLayout() {
       screenOptions={{
         headerShown: true,
         presentation: "modal",
+        headerStyle: {
+          backgroundColor: "#FF6B6B",
+        },
+        headerTintColor: "#FFFFFF",
       }}
     >
       <Stack.Screen
