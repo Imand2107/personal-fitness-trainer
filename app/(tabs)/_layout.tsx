@@ -7,6 +7,7 @@ const COLORS = {
   primaryDark: "#E85D5D",
   primaryLight: "#FF8787",
   background: "#FFF9F9",
+  card: "#FFFFFF",
   text: "#2D3436",
   textSecondary: "#636E72",
   border: "#FFE5E5",
