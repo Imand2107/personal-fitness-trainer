@@ -134,48 +134,103 @@ export default function QuickStartScreen() {
   // Load background music
   const loadBackgroundMusic = async () => {
     try {
-      const { sound: music } = await Audio.Sound.createAsync(
+      console.log("[Sound] Loading background music...");
+      const { sound } = await Audio.Sound.createAsync(
         require("../../../assets/audio/workout-music.mp3"),
         {
+          shouldPlay: false,
           isLooping: true,
           volume: 0,
-          shouldPlay: false,
+        },
+        (status) => {
+          if (status.isLoaded) {
+            console.log("[Sound] Background music loaded successfully");
+          } else if (status.error) {
+            console.error(
+              "[Sound] Error loading background music:",
+              status.error
+            );
+          }
         }
       );
-      setBgMusic(music);
+      setBgMusic(sound);
+      console.log("[Sound] Background music initialized");
     } catch (error) {
-      console.error("Error loading background music:", error);
+      console.error("[Sound] Error loading background music:", error);
     }
   };
 
   // Fade in effect
   const fadeInMusic = async () => {
-    if (!bgMusic || isMuted) return;
+    if (!bgMusic) {
+      console.log("[Sound] No background music available");
+      return;
+    }
 
-    // Start playing at volume 0
-    await bgMusic.playAsync();
+    try {
+      console.log("[Sound] Starting fade in...");
+      // Ensure the sound is loaded before playing
+      const status = await bgMusic.getStatusAsync();
+      if (!status.isLoaded) {
+        console.log("[Sound] Sound not loaded, reloading...");
+        await loadBackgroundMusic();
+      }
 
-    // Gradually increase volume
-    const targetVolume = isMuted ? 0 : 0.5;
-    for (let vol = 0; vol <= targetVolume; vol += 0.1) {
-      await bgMusic.setVolumeAsync(vol);
-      setBgMusicVolume(vol);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Start playing at volume 0
+      await bgMusic.setVolumeAsync(0);
+      await bgMusic.playAsync();
+
+      // Gradually increase volume
+      const targetVolume = isMuted ? 0 : 0.5;
+      const steps = 10;
+      const interval = 50; // milliseconds
+      const volumeIncrement = targetVolume / steps;
+
+      for (let i = 0; i <= steps; i++) {
+        if (!bgMusic) break;
+        const newVolume = Math.min(volumeIncrement * i, targetVolume);
+        await bgMusic.setVolumeAsync(newVolume);
+        await new Promise((resolve) => setTimeout(resolve, interval));
+      }
+      setBgMusicVolume(targetVolume);
+      console.log("[Sound] Fade in complete");
+    } catch (error) {
+      console.error("[Sound] Error during fade in:", error);
     }
   };
 
   // Fade out effect
   const fadeOutMusic = async () => {
-    if (!bgMusic) return;
-
-    // Gradually decrease volume
-    for (let vol = bgMusicVolume; vol >= 0; vol -= 0.1) {
-      await bgMusic.setVolumeAsync(vol);
-      setBgMusicVolume(vol);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    if (!bgMusic) {
+      console.log("[Sound] No background music to fade out");
+      return;
     }
 
-    await bgMusic.stopAsync();
+    try {
+      console.log("[Sound] Starting fade out...");
+      // Check if sound is loaded
+      const status = await bgMusic.getStatusAsync();
+      if (!status.isLoaded) {
+        console.log("[Sound] Sound not loaded, skipping fade out");
+        return;
+      }
+
+      // Only fade out if the sound is actually playing
+      if (status.isPlaying) {
+        // Gradually decrease volume
+        for (let vol = bgMusicVolume; vol >= 0; vol -= 0.1) {
+          await bgMusic.setVolumeAsync(Math.max(0, vol));
+          setBgMusicVolume(vol);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+
+        // Stop the music after fading out
+        await bgMusic.stopAsync();
+      }
+      console.log("[Sound] Fade out complete");
+    } catch (error) {
+      console.error("[Sound] Error during fade out:", error);
+    }
   };
 
   // Load completion sound
@@ -203,11 +258,37 @@ export default function QuickStartScreen() {
 
   // Load sounds when component mounts
   useEffect(() => {
-    loadBackgroundMusic();
-    loadCompletionSound();
+    let mounted = true;
+
+    const initializeAudio = async () => {
+      try {
+        console.log("[Sound] Initializing audio...");
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+        });
+
+        if (mounted) {
+          await loadBackgroundMusic();
+          await loadCompletionSound();
+          await playCountdownSound();
+        }
+      } catch (error) {
+        console.error("[Sound] Error initializing audio:", error);
+      }
+    };
+
+    initializeAudio();
+
     return () => {
+      mounted = false;
+      // Cleanup sounds
       if (bgMusic) {
         bgMusic.unloadAsync();
+      }
+      if (sound) {
+        sound.unloadAsync();
       }
       if (completionSound) {
         completionSound.unloadAsync();
@@ -385,45 +466,29 @@ export default function QuickStartScreen() {
     }
   };
 
-  const handleCloseCompletion = () => {
-    setShowCompletionModal(false);
-    router.replace("/(tabs)/workout");
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handlePauseResume = async () => {
-    if (isPaused) {
-      setShowCountdown(true);
-      setCountdownValue(3);
-      playCountdownSound();
-    } else {
-      setIsPaused(true);
+  // Add cleanup effect for navigation
+  useEffect(() => {
+    return () => {
+      // Cleanup when component unmounts
       if (bgMusic) {
-        await bgMusic.pauseAsync();
+        fadeOutMusic().then(() => {
+          bgMusic.unloadAsync();
+        });
       }
-    }
-  };
+      if (sound) {
+        sound.unloadAsync();
+      }
+      if (completionSound) {
+        completionSound.unloadAsync();
+      }
+    };
+  }, [bgMusic, sound, completionSound]);
 
-  // Add resume music function
-  const resumeMusic = async () => {
-    if (!bgMusic || !isPaused) return;
-    await bgMusic.playAsync();
-    // Restore previous volume
-    if (bgMusicVolume > 0) {
-      await bgMusic.setVolumeAsync(bgMusicVolume);
-    }
-  };
-
-  // Modify the Alert handlers to resume music
-  const handleQuit = () => {
+  // Modify handleQuit function
+  const handleQuit = async () => {
     setIsPaused(true);
     if (bgMusic) {
-      bgMusic.pauseAsync();
+      await bgMusic.pauseAsync();
     }
 
     // Use confirm for web compatibility
@@ -432,9 +497,11 @@ export default function QuickStartScreen() {
         "Are you sure you want to quit this workout?"
       );
       if (confirmQuit) {
-        fadeOutMusic().then(() => {
-          router.replace("/(tabs)/workout");
-        });
+        await fadeOutMusic();
+        if (bgMusic) {
+          await bgMusic.unloadAsync();
+        }
+        router.replace("/(tabs)/workout");
       } else {
         setIsPaused(false);
         resumeMusic();
@@ -466,12 +533,53 @@ export default function QuickStartScreen() {
             style: "destructive",
             onPress: async () => {
               await fadeOutMusic();
+              if (bgMusic) {
+                await bgMusic.unloadAsync();
+              }
               router.replace("/(tabs)/workout");
             },
           },
         ],
         { cancelable: false }
       );
+    }
+  };
+
+  // Modify handleCloseCompletion function
+  const handleCloseCompletion = async () => {
+    setShowCompletionModal(false);
+    if (bgMusic) {
+      await bgMusic.unloadAsync();
+    }
+    router.replace("/(tabs)/workout");
+  };
+
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handlePauseResume = async () => {
+    if (isPaused) {
+      setShowCountdown(true);
+      setCountdownValue(3);
+      playCountdownSound();
+    } else {
+      setIsPaused(true);
+      if (bgMusic) {
+        await bgMusic.pauseAsync();
+      }
+    }
+  };
+
+  // Add resume music function
+  const resumeMusic = async () => {
+    if (!bgMusic || !isPaused) return;
+    await bgMusic.playAsync();
+    // Restore previous volume
+    if (bgMusicVolume > 0) {
+      await bgMusic.setVolumeAsync(bgMusicVolume);
     }
   };
 

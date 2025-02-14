@@ -195,8 +195,11 @@ export default function WorkoutSessionScreen() {
     }
   };
 
-  const handleCloseCompletion = () => {
+  const handleCloseCompletion = async () => {
     setShowCompletionModal(false);
+    if (bgMusic) {
+      await bgMusic.unloadAsync();
+    }
     router.back();
   };
 
@@ -386,10 +389,10 @@ export default function WorkoutSessionScreen() {
     }
   };
 
-  const handleQuit = () => {
+  const handleQuit = async () => {
     setIsPaused(true);
     if (bgMusic) {
-      bgMusic.pauseAsync();
+      await bgMusic.pauseAsync();
     }
 
     // Use confirm for web compatibility
@@ -398,9 +401,11 @@ export default function WorkoutSessionScreen() {
         "Are you sure you want to quit this workout?"
       );
       if (confirmQuit) {
-        fadeOutMusic().then(() => {
-          router.replace("/(tabs)/workout");
-        });
+        await fadeOutMusic();
+        if (bgMusic) {
+          await bgMusic.unloadAsync();
+        }
+        router.replace("/(tabs)/workout");
       } else {
         setIsPaused(false);
         resumeMusic();
@@ -432,6 +437,9 @@ export default function WorkoutSessionScreen() {
             style: "destructive",
             onPress: async () => {
               await fadeOutMusic();
+              if (bgMusic) {
+                await bgMusic.unloadAsync();
+              }
               router.replace("/(tabs)/workout");
             },
           },
@@ -440,6 +448,24 @@ export default function WorkoutSessionScreen() {
       );
     }
   };
+
+  // Add cleanup effect for navigation
+  useEffect(() => {
+    return () => {
+      // Cleanup when component unmounts
+      if (bgMusic) {
+        fadeOutMusic().then(() => {
+          bgMusic.unloadAsync();
+        });
+      }
+      if (sound) {
+        sound.unloadAsync();
+      }
+      if (completionSound) {
+        completionSound.unloadAsync();
+      }
+    };
+  }, [bgMusic, sound, completionSound]);
 
   if (!workout || !currentExercise) {
     return (
