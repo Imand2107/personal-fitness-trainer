@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,15 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { workoutPlans } from "../../../../assets/data/workouts";
-import { completeWorkout } from "../../../../src/services/workout";
-import { auth } from "../../../../firebase/config";
+import { workoutPlans } from "../../../assets/data/workouts";
 
-export default function WorkoutSessionScreen() {
-  const { id } = useLocalSearchParams();
+export default function QuickStartScreen() {
   const router = useRouter();
-  const workout = workoutPlans.find((w) => w.id === id);
+  // Select a random beginner-friendly workout
+  const workout =
+    workoutPlans.find((w) => w.difficulty === "beginner") || workoutPlans[0];
 
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -41,7 +40,6 @@ export default function WorkoutSessionScreen() {
       }, 1000);
     } else if (timeLeft === 0 && !isPaused) {
       if (isResting) {
-        // Rest period is over, move to next exercise
         setIsResting(false);
         if (currentExerciseIndex < workout!.exercises.length - 1) {
           setCurrentExerciseIndex((prev) => prev + 1);
@@ -49,11 +47,9 @@ export default function WorkoutSessionScreen() {
           handleWorkoutComplete();
         }
       } else if (currentExerciseIndex < workout!.exercises.length - 1) {
-        // Exercise is complete, start rest period
         setIsResting(true);
         setTimeLeft(workout!.restBetweenExercises);
       } else {
-        // Workout is complete
         handleWorkoutComplete();
       }
     }
@@ -61,27 +57,19 @@ export default function WorkoutSessionScreen() {
     return () => clearInterval(interval);
   }, [isPaused, timeLeft, isResting, currentExerciseIndex]);
 
-  const handleWorkoutComplete = async () => {
-    try {
-      const userId = auth.currentUser?.uid;
-      if (!userId || !workout?.id) return;
-
-      await completeWorkout(workout.id);
-      Alert.alert(
-        "Workout Complete!",
-        `Great job! You completed the workout in ${Math.floor(
-          totalTimeElapsed / 60
-        )} minutes.`,
-        [
-          {
-            text: "OK",
-            onPress: () => router.back(),
-          },
-        ]
-      );
-    } catch (error) {
-      console.error("Error completing workout:", error);
-    }
+  const handleWorkoutComplete = () => {
+    Alert.alert(
+      "Workout Complete!",
+      `Great job! You completed the quick workout in ${Math.floor(
+        totalTimeElapsed / 60
+      )} minutes.`,
+      [
+        {
+          text: "OK",
+          onPress: () => router.replace("/(tabs)/workout"),
+        },
+      ]
+    );
   };
 
   const formatTime = (seconds: number): string => {
@@ -95,7 +83,9 @@ export default function WorkoutSessionScreen() {
   };
 
   const handleQuit = () => {
-    setIsPaused(true);
+    console.log("Quit button pressed");
+    setIsPaused(true); // Pause the workout when showing confirmation
+    console.log("Showing alert dialog");
     Alert.alert(
       "Quit Workout",
       "Are you sure you want to quit this workout?",
@@ -103,14 +93,16 @@ export default function WorkoutSessionScreen() {
         {
           text: "Resume",
           onPress: () => {
-            setIsPaused(false);
+            console.log("Resume pressed");
+            setIsPaused(false); // Resume the workout if user chooses to continue
           },
           style: "default",
         },
         {
           text: "Cancel",
           onPress: () => {
-            setIsPaused(false);
+            console.log("Cancel pressed");
+            setIsPaused(false); // Resume the workout if user cancels
           },
           style: "cancel",
         },
@@ -118,7 +110,8 @@ export default function WorkoutSessionScreen() {
           text: "Quit",
           style: "destructive",
           onPress: () => {
-            router.replace("/(tabs)/workout");
+            console.log("Quit confirmed");
+            router.replace("/(tabs)/workout"); // Navigate back to workout screen
           },
         },
       ],
@@ -129,7 +122,7 @@ export default function WorkoutSessionScreen() {
   if (!workout || !currentExercise) {
     return (
       <View style={styles.container}>
-        <Text>Workout not found</Text>
+        <Text>No workout available</Text>
       </View>
     );
   }
