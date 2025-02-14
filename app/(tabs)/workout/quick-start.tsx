@@ -121,14 +121,17 @@ export default function QuickStartScreen() {
         setIsResting(false);
         if (currentExerciseIndex < workout!.exercises.length - 1) {
           setCurrentExerciseIndex((prev) => prev + 1);
+          setTimeLeft(workout!.exercises[currentExerciseIndex + 1].duration);
         } else {
           handleWorkoutComplete();
         }
-      } else if (currentExerciseIndex < workout!.exercises.length - 1) {
-        setIsResting(true);
-        setTimeLeft(workout!.restBetweenExercises);
       } else {
-        handleWorkoutComplete();
+        if (currentExerciseIndex < workout!.exercises.length - 1) {
+          setIsResting(true);
+          setTimeLeft(workout!.restBetweenExercises);
+        } else {
+          handleWorkoutComplete();
+        }
       }
     }
 
@@ -245,7 +248,17 @@ export default function QuickStartScreen() {
             <Text style={styles.exerciseName}>
               {isResting ? "Rest Period" : currentExercise.name}
             </Text>
-            {!isResting && (
+            {isResting ? (
+              <View style={styles.nextExerciseContainer}>
+                <Text style={styles.nextExerciseTitle}>Next Exercise:</Text>
+                <Text style={styles.nextExerciseName}>
+                  {workout.exercises[currentExerciseIndex + 1].name}
+                </Text>
+                <Text style={styles.nextExerciseDescription}>
+                  {workout.exercises[currentExerciseIndex + 1].description}
+                </Text>
+              </View>
+            ) : (
               <>
                 <Text style={styles.exerciseDescription}>
                   {currentExercise.description}
@@ -374,5 +387,28 @@ const styles = StyleSheet.create({
     fontSize: 120,
     fontWeight: "bold",
     color: COLORS.primary,
+  },
+  nextExerciseContainer: {
+    backgroundColor: COLORS.background,
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  nextExerciseTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  nextExerciseName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.primary,
+    marginBottom: 8,
+  },
+  nextExerciseDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
 });

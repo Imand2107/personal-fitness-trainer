@@ -25,3 +25,7 @@ google-services.json
 expo-env.d.ts
 # @end expo-cli
 content/*
+
+# Allow audio assets
+!assets/audio/
+!assets/audio/*
