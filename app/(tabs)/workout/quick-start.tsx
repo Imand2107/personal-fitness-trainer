@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
 import { workoutPlans } from "../../../assets/data/workouts";
 
 const COLORS = {
@@ -40,6 +41,7 @@ export default function QuickStartScreen() {
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownValue, setCountdownValue] = useState(3);
   const [scaleAnim] = useState(new Animated.Value(1));
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
 
@@ -48,7 +50,33 @@ export default function QuickStartScreen() {
     setTimeLeft(currentExercise?.duration || 0);
   }, [currentExerciseIndex, workout]);
 
-  // Countdown animation effect
+  // Load and play countdown sound
+  const playCountdownSound = async () => {
+    try {
+      if (sound) {
+        await sound.replayAsync();
+      } else {
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          require("../../../assets/audio/short-beep-countdown.mp3")
+        );
+        setSound(newSound);
+        await newSound.playAsync();
+      }
+    } catch (error) {
+      console.error("Error playing sound:", error);
+    }
+  };
+
+  // Cleanup sound when component unmounts
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
+  // Modified countdown effect without sound
   useEffect(() => {
     if (showCountdown) {
       if (countdownValue > 0) {
@@ -73,7 +101,7 @@ export default function QuickStartScreen() {
 
         return () => clearTimeout(timer);
       } else {
-        // Countdown finished, start workout
+        // Start workout
         setShowCountdown(false);
         setIsPaused(false);
       }
@@ -133,6 +161,8 @@ export default function QuickStartScreen() {
       // If starting the workout, show countdown first
       setShowCountdown(true);
       setCountdownValue(3);
+      // Play the countdown sound once when starting
+      playCountdownSound();
     } else {
       setIsPaused(true);
     }
