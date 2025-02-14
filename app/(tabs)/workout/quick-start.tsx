@@ -42,6 +42,8 @@ export default function QuickStartScreen() {
   const [countdownValue, setCountdownValue] = useState(3);
   const [scaleAnim] = useState(new Animated.Value(1));
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [bgMusic, setBgMusic] = useState<Audio.Sound | null>(null);
+  const [bgMusicVolume, setBgMusicVolume] = useState(0);
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
 
@@ -76,7 +78,63 @@ export default function QuickStartScreen() {
     };
   }, [sound]);
 
-  // Modified countdown effect without sound
+  // Load background music
+  const loadBackgroundMusic = async () => {
+    try {
+      const { sound: music } = await Audio.Sound.createAsync(
+        require("../../../assets/audio/workout-music.mp3"),
+        {
+          isLooping: true,
+          volume: 0,
+          shouldPlay: false,
+        }
+      );
+      setBgMusic(music);
+    } catch (error) {
+      console.error("Error loading background music:", error);
+    }
+  };
+
+  // Fade in effect
+  const fadeInMusic = async () => {
+    if (!bgMusic) return;
+
+    // Start playing at volume 0
+    await bgMusic.playAsync();
+
+    // Gradually increase volume
+    for (let vol = 0; vol <= 1; vol += 0.1) {
+      await bgMusic.setVolumeAsync(vol);
+      setBgMusicVolume(vol);
+      await new Promise((resolve) => setTimeout(resolve, 100)); // 100ms delay between volume changes
+    }
+  };
+
+  // Fade out effect
+  const fadeOutMusic = async () => {
+    if (!bgMusic) return;
+
+    // Gradually decrease volume
+    for (let vol = bgMusicVolume; vol >= 0; vol -= 0.1) {
+      await bgMusic.setVolumeAsync(vol);
+      setBgMusicVolume(vol);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    await bgMusic.stopAsync();
+  };
+
+  // Load background music when component mounts
+  useEffect(() => {
+    loadBackgroundMusic();
+    return () => {
+      if (bgMusic) {
+        bgMusic.unloadAsync();
+      }
+    };
+  }, []);
+
+  // Modified countdown effect to start music
   useEffect(() => {
     if (showCountdown) {
       if (countdownValue > 0) {
@@ -101,9 +159,10 @@ export default function QuickStartScreen() {
 
         return () => clearTimeout(timer);
       } else {
-        // Start workout
+        // Start workout and fade in music
         setShowCountdown(false);
         setIsPaused(false);
+        fadeInMusic();
       }
     }
   }, [showCountdown, countdownValue]);
@@ -138,7 +197,8 @@ export default function QuickStartScreen() {
     return () => clearInterval(interval);
   }, [isPaused, timeLeft, isResting, currentExerciseIndex]);
 
-  const handleWorkoutComplete = () => {
+  const handleWorkoutComplete = async () => {
+    await fadeOutMusic();
     Alert.alert(
       "Workout Complete!",
       `Great job! You completed the quick workout in ${Math.floor(
@@ -159,48 +219,61 @@ export default function QuickStartScreen() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handlePauseResume = () => {
+  const handlePauseResume = async () => {
     if (isPaused) {
-      // If starting the workout, show countdown first
       setShowCountdown(true);
       setCountdownValue(3);
-      // Play the countdown sound once when starting
       playCountdownSound();
     } else {
       setIsPaused(true);
+      if (bgMusic) {
+        await bgMusic.pauseAsync();
+      }
     }
   };
 
+  // Add resume music function
+  const resumeMusic = async () => {
+    if (!bgMusic || !isPaused) return;
+    await bgMusic.playAsync();
+    // Restore previous volume
+    if (bgMusicVolume > 0) {
+      await bgMusic.setVolumeAsync(bgMusicVolume);
+    }
+  };
+
+  // Modify the Alert handlers to resume music
   const handleQuit = () => {
-    console.log("Quit button pressed");
-    setIsPaused(true); // Pause the workout when showing confirmation
-    console.log("Showing alert dialog");
+    setIsPaused(true);
+    if (bgMusic) {
+      bgMusic.pauseAsync();
+    }
     Alert.alert(
       "Quit Workout",
       "Are you sure you want to quit this workout?",
       [
         {
           text: "Resume",
-          onPress: () => {
-            console.log("Resume pressed");
-            setIsPaused(false); // Resume the workout if user chooses to continue
+          onPress: async () => {
+            setIsPaused(false);
+            await resumeMusic();
           },
           style: "default",
         },
         {
           text: "Cancel",
-          onPress: () => {
-            console.log("Cancel pressed");
-            setIsPaused(false); // Resume the workout if user cancels
+          onPress: async () => {
+            setIsPaused(false);
+            await resumeMusic();
           },
           style: "cancel",
         },
         {
           text: "Quit",
           style: "destructive",
-          onPress: () => {
-            console.log("Quit confirmed");
-            router.replace("/(tabs)/workout"); // Navigate back to workout screen
+          onPress: async () => {
+            await fadeOutMusic();
+            router.replace("/(tabs)/workout");
           },
         },
       ],
