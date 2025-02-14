@@ -5,10 +5,58 @@ const getExerciseImage = (filename: string) => `/assets/images/exercises/${filen
 
 // Define common exercises that are used across multiple workouts
 export const commonExercises: Record<string, Exercise> = {
+  // Cardio & Warm-up Exercises
+  jumpingJacks: {
+    id: 'jumping_jacks',
+    name: 'Jumping Jacks',
+    description: 'Full body warm-up exercise to get your heart rate up',
+    imageUrl: getExerciseImage('jumping-jacks.gif'),
+    duration: 30,
+    targetMuscles: ['full_body'],
+    equipment: [],
+    tips: [
+      'Land softly on your feet',
+      'Keep core engaged',
+      'Coordinate arm and leg movements'
+    ],
+    difficulty: 'beginner'
+  },
+  highKnees: {
+    id: 'high_knees',
+    name: 'High Knees',
+    description: 'Dynamic cardio exercise that engages core and legs',
+    imageUrl: getExerciseImage('high-knees.gif'),
+    duration: 30,
+    targetMuscles: ['core', 'legs'],
+    equipment: [],
+    tips: [
+      'Drive knees up towards chest',
+      'Stay on balls of feet',
+      'Keep upper body straight'
+    ],
+    difficulty: 'beginner'
+  },
+  mountainClimbers: {
+    id: 'mountain_climbers',
+    name: 'Mountain Climbers',
+    description: 'Dynamic plank exercise targeting core and cardio',
+    imageUrl: getExerciseImage('mountain-climbers.gif'),
+    duration: 30,
+    targetMuscles: ['core', 'shoulders', 'cardio'],
+    equipment: [],
+    tips: [
+      'Keep hips level',
+      'Engage core throughout',
+      'Alternate legs quickly'
+    ],
+    difficulty: 'intermediate'
+  },
+
+  // Push-up Variations
   pushups: {
     id: 'pushups',
     name: 'Push-ups',
-    description: 'A classic bodyweight exercise that targets chest, shoulders, and triceps.',
+    description: 'Classic bodyweight exercise targeting chest, shoulders, and triceps',
     imageUrl: getExerciseImage('pushup.gif'),
     duration: 45,
     sets: 3,
@@ -19,14 +67,103 @@ export const commonExercises: Record<string, Exercise> = {
     tips: [
       'Keep your body in a straight line',
       'Lower your chest to just above the ground',
-      'Keep your core engaged throughout the movement'
+      'Keep your core engaged throughout'
     ],
     difficulty: 'intermediate'
   },
+  wideArmPushups: {
+    id: 'wide_arm_pushups',
+    name: 'Wide Arm Push-ups',
+    description: 'Push-ups with wider arm placement for outer chest focus',
+    imageUrl: getExerciseImage('wide-arm-push-up.gif'),
+    duration: 45,
+    sets: 3,
+    reps: 8,
+    restBetweenSets: 30,
+    targetMuscles: ['chest', 'shoulders'],
+    equipment: [],
+    tips: [
+      'Place hands wider than shoulder width',
+      'Keep elbows at 45-degree angle',
+      'Maintain straight body alignment'
+    ],
+    difficulty: 'intermediate'
+  },
+  diamondPushups: {
+    id: 'diamond_pushups',
+    name: 'Diamond Push-ups',
+    description: 'Advanced push-up variation targeting triceps',
+    imageUrl: getExerciseImage('diamond-push-up.gif'),
+    duration: 45,
+    sets: 3,
+    reps: 8,
+    restBetweenSets: 30,
+    targetMuscles: ['triceps', 'chest'],
+    equipment: [],
+    tips: [
+      'Form diamond shape with hands',
+      'Keep elbows close to body',
+      'Lower chest to hands'
+    ],
+    difficulty: 'advanced'
+  },
+
+  // Core Exercises
+  plank: {
+    id: 'plank',
+    name: 'Plank',
+    description: 'Static hold for core stability',
+    imageUrl: getExerciseImage('plank.jpg'),
+    duration: 30,
+    targetMuscles: ['core', 'shoulders'],
+    equipment: [],
+    tips: [
+      'Keep body straight',
+      'Engage core',
+      'Look at the floor',
+      'Keep breathing steady'
+    ],
+    difficulty: 'beginner'
+  },
+  russianTwist: {
+    id: 'russian_twist',
+    name: 'Russian Twist',
+    description: 'Rotational exercise targeting obliques',
+    imageUrl: getExerciseImage('russian-twist.gif'),
+    duration: 45,
+    reps: 32,
+    targetMuscles: ['obliques', 'core'],
+    equipment: [],
+    tips: [
+      'Sit with knees bent',
+      'Lean back slightly',
+      'Rotate torso side to side'
+    ],
+    difficulty: 'intermediate'
+  },
+  legRaises: {
+    id: 'leg_raises',
+    name: 'Leg Raises',
+    description: 'Targets lower abs',
+    imageUrl: getExerciseImage('leg-raises.gif'),
+    duration: 45,
+    sets: 3,
+    reps: 12,
+    targetMuscles: ['lower_abs'],
+    equipment: [],
+    tips: [
+      'Keep legs straight',
+      'Control the movement',
+      'Lower legs slowly'
+    ],
+    difficulty: 'intermediate'
+  },
+
+  // Lower Body Exercises
   squats: {
     id: 'squats',
     name: 'Squats',
-    description: 'A fundamental lower body exercise targeting multiple muscle groups.',
+    description: 'Fundamental lower body exercise targeting multiple muscle groups',
     imageUrl: getExerciseImage('squats.gif'),
     duration: 45,
     sets: 3,
@@ -35,13 +172,47 @@ export const commonExercises: Record<string, Exercise> = {
     targetMuscles: ['quadriceps', 'hamstrings', 'glutes', 'core'],
     equipment: [],
     tips: [
-      'Keep your feet shoulder-width apart',
-      'Keep your back straight',
-      'Lower until your thighs are parallel to the ground'
+      'Keep feet shoulder-width apart',
+      'Keep back straight',
+      'Lower until thighs are parallel to ground'
     ],
     difficulty: 'beginner'
   },
-  // Add more common exercises...
+  lunges: {
+    id: 'lunges',
+    name: 'Lunges',
+    description: 'Lower body strengthening exercise',
+    imageUrl: getExerciseImage('lunges.gif'),
+    duration: 45,
+    sets: 3,
+    reps: 10,
+    targetMuscles: ['quadriceps', 'hamstrings', 'glutes'],
+    equipment: [],
+    tips: [
+      'Keep torso upright',
+      'Step forward with control',
+      'Back knee nearly touches ground'
+    ],
+    difficulty: 'beginner'
+  },
+  burpees: {
+    id: 'burpees',
+    name: 'Burpees',
+    description: 'Full body cardio exercise',
+    imageUrl: getExerciseImage('burpee.webp'),
+    duration: 45,
+    sets: 3,
+    reps: 8,
+    targetMuscles: ['full_body', 'cardio'],
+    equipment: [],
+    tips: [
+      'Start standing',
+      'Drop to plank position',
+      'Optional push-up',
+      'Jump back to feet'
+    ],
+    difficulty: 'advanced'
+  }
 };
 
 // Define workout plans
@@ -50,20 +221,74 @@ export const workoutPlans: WorkoutPlan[] = [
     id: 'beginner_full_body',
     category: 'full_body',
     name: 'Beginner Full Body Workout',
-    description: 'A complete body workout suitable for beginners.',
+    description: 'A complete body workout suitable for beginners',
     difficulty: 'beginner',
     duration: 30,
     exercises: [
-      commonExercises.pushups,
+      commonExercises.jumpingJacks,
       commonExercises.squats,
-      // Add more exercises...
+      commonExercises.pushups,
+      commonExercises.plank,
+      commonExercises.lunges
     ],
     restBetweenExercises: 60,
     equipmentNeeded: [],
     targetMuscles: ['chest', 'legs', 'core', 'back', 'shoulders'],
     calories: 150
   },
-  // Add more workout plans...
+  {
+    id: 'intermediate_abs',
+    category: 'abs',
+    name: 'Core Crusher Workout',
+    description: 'Intensive core workout for intermediate fitness levels',
+    difficulty: 'intermediate',
+    duration: 25,
+    exercises: [
+      commonExercises.plank,
+      commonExercises.russianTwist,
+      commonExercises.mountainClimbers,
+      commonExercises.legRaises
+    ],
+    restBetweenExercises: 45,
+    equipmentNeeded: [],
+    targetMuscles: ['core', 'obliques', 'lower_abs'],
+    calories: 200
+  },
+  {
+    id: 'advanced_cardio',
+    category: 'fat_burning',
+    name: 'High Intensity Fat Burn',
+    description: 'Advanced cardio workout for maximum calorie burn',
+    difficulty: 'advanced',
+    duration: 40,
+    exercises: [
+      commonExercises.burpees,
+      commonExercises.mountainClimbers,
+      commonExercises.highKnees,
+      commonExercises.jumpingJacks
+    ],
+    restBetweenExercises: 30,
+    equipmentNeeded: [],
+    targetMuscles: ['full_body', 'cardio'],
+    calories: 400
+  },
+  {
+    id: 'chest_and_arms',
+    category: 'chest',
+    name: 'Upper Body Builder',
+    description: 'Comprehensive chest and arms workout',
+    difficulty: 'intermediate',
+    duration: 35,
+    exercises: [
+      commonExercises.pushups,
+      commonExercises.diamondPushups,
+      commonExercises.wideArmPushups
+    ],
+    restBetweenExercises: 60,
+    equipmentNeeded: [],
+    targetMuscles: ['chest', 'triceps', 'shoulders'],
+    calories: 250
+  }
 ];
 
 // Export workout categories with their metadata
@@ -77,7 +302,7 @@ export const workoutCategories: Record<WorkoutCategory, {
     name: 'Abs Workout',
     description: 'Build core strength and stability',
     icon: 'fitness',
-    primaryMuscles: ['abs', 'obliques', 'lower back']
+    primaryMuscles: ['abs', 'obliques', 'lower_back']
   },
   arm: {
     name: 'Arm Workout',
@@ -95,19 +320,19 @@ export const workoutCategories: Record<WorkoutCategory, {
     name: 'Endurance Workout',
     description: 'Improve cardiovascular fitness and stamina',
     icon: 'heart',
-    primaryMuscles: ['heart', 'lungs', 'full body']
+    primaryMuscles: ['heart', 'lungs', 'full_body']
   },
   fat_burning: {
     name: 'Fat Burning',
     description: 'High-intensity workouts for maximum calorie burn',
     icon: 'flame',
-    primaryMuscles: ['full body']
+    primaryMuscles: ['full_body']
   },
   flexibility: {
     name: 'Flexibility Workout',
     description: 'Improve mobility and flexibility',
     icon: 'body',
-    primaryMuscles: ['full body', 'joints']
+    primaryMuscles: ['full_body', 'joints']
   },
   full_body: {
     name: 'Full Body Workout',
