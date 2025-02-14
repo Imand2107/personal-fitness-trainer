@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -45,6 +46,28 @@ const COLORS = {
   text: "#2D3436",
   textSecondary: "#636E72",
   border: "#FFE5E5",
+};
+
+const getExerciseImage = (exerciseId: string) => {
+  const imageMap: { [key: string]: any } = {
+    jumping_jacks: require("../../../assets/images/exercises/jumping-jacks.gif"),
+    high_knees: require("../../../assets/images/exercises/high-knees.gif"),
+    mountain_climbers: require("../../../assets/images/exercises/mountain-climbers.gif"),
+    pushups: require("../../../assets/images/exercises/pushup.gif"),
+    wide_arm_pushups: require("../../../assets/images/exercises/wide-arm-push-up.gif"),
+    diamond_pushups: require("../../../assets/images/exercises/Diamond_Push-Up.gif"),
+    plank: require("../../../assets/images/exercises/plank.jpg"),
+    russian_twist: require("../../../assets/images/exercises/russian-twist.gif"),
+    leg_raises: require("../../../assets/images/exercises/leg-raises.gif"),
+    squats: require("../../../assets/images/exercises/squats.gif"),
+    lunges: require("../../../assets/images/exercises/lunges.gif"),
+    burpees: require("../../../assets/images/exercises/burpee.webp"),
+  };
+
+  return (
+    imageMap[exerciseId] ||
+    require("../../../assets/images/exercises/plank.jpg")
+  );
 };
 
 export default function WorkoutScreen() {
@@ -148,6 +171,11 @@ export default function WorkoutScreen() {
             style={styles.workoutCard}
             onPress={() => router.push(`/workout/${workout.id}`)}
           >
+            <Image
+              source={getExerciseImage(workout.exercises[0].id)}
+              style={styles.workoutImage}
+              resizeMode="cover"
+            />
             <View style={styles.workoutInfo}>
               <Text style={styles.workoutTitle}>{workout.name}</Text>
               <Text style={styles.workoutSubtitle}>
@@ -259,11 +287,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.card,
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  workoutImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
   },
   workoutInfo: {
     flex: 1,
@@ -288,7 +322,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 4,
   },
   tagText: {
     fontSize: 12,
