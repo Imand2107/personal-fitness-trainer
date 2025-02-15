@@ -270,7 +270,7 @@ export default function QuickStartScreen() {
   const loadCompletionSound = async () => {
     try {
       const { sound } = await Audio.Sound.createAsync(
-        require("../../../assets/audio/workout-complete-male.mp3")
+        require("../../../assets/audio/workout-complete.mp3")
       );
       setCompletionSound(sound);
     } catch (error) {
