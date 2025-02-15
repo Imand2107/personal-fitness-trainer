@@ -7,11 +7,33 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getCurrentUser } from "../../../src/services/auth";
-import { User, Goal } from "../../../src/types";
 import { workoutPlans } from "../../../assets/data/workouts";
+
+interface Exercise {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  difficulty: string;
+  targetMuscles: string[];
+  equipment: string[];
+  tips: string[];
+}
+
+type WorkoutPlan = {
+  id: string;
+  name: string;
+  description: string;
+  difficulty: string;
+  exercises: Exercise[];
+  restBetweenExercises: number;
+  category: string;
+  goalType?: string;
+  duration?: number;
+  calories?: number;
+};
 
 const COLORS = {
   primary: "#FF6B6B",
@@ -24,178 +46,156 @@ const COLORS = {
   text: "#2D3436",
   textSecondary: "#636E72",
   border: "#FFE5E5",
-  divider: "#FFE5E5",
+};
+
+const getExerciseImage = (exerciseId: string) => {
+  const imageMap: { [key: string]: any } = {
+    jumping_jacks: require("../../../assets/images/exercises/jumping-jacks.gif"),
+    high_knees: require("../../../assets/images/exercises/high-knees.gif"),
+    mountain_climbers: require("../../../assets/images/exercises/mountain-climbers.gif"),
+    pushups: require("../../../assets/images/exercises/pushup.gif"),
+    wide_arm_pushups: require("../../../assets/images/exercises/wide-arm-push-up.gif"),
+    diamond_pushups: require("../../../assets/images/exercises/Diamond_Push-Up.gif"),
+    plank: require("../../../assets/images/exercises/plank.jpg"),
+    russian_twist: require("../../../assets/images/exercises/russian-twist.gif"),
+    leg_raises: require("../../../assets/images/exercises/leg-raises.gif"),
+    squats: require("../../../assets/images/exercises/squats.gif"),
+    lunges: require("../../../assets/images/exercises/lunges.gif"),
+    burpees: require("../../../assets/images/exercises/burpee.webp"),
+  };
+
+  return (
+    imageMap[exerciseId] ||
+    require("../../../assets/images/exercises/plank.jpg")
+  );
 };
 
 export default function WorkoutScreen() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [workouts, setWorkouts] = useState<WorkoutPlan[]>([]);
 
-  const loadUserData = async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        router.replace("/(auth)/login");
-        return;
-      }
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error loading user data:", error);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    // In a real app, this would fetch from an API/database
+    setWorkouts(workoutPlans as unknown as WorkoutPlan[]);
+  }, []);
+
+  const getWorkoutTags = (workout: WorkoutPlan) => {
+    const tags: string[] = [];
+
+    // Add category as a tag
+    if (workout.category) {
+      tags.push(workout.category.replace("_", " "));
     }
-  };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadUserData();
-    }, [])
-  );
-
-  const getGoalIcon = (goalType: string) => {
-    switch (goalType) {
-      case "weight":
-        return "scale-outline";
-      case "strength":
-        return "barbell-outline";
-      case "stamina":
-        return "pulse-outline";
-      default:
-        return "fitness-outline";
+    // Add difficulty as a tag
+    if (workout.difficulty) {
+      tags.push(workout.difficulty);
     }
+
+    // Add goal type as a tag if it exists
+    if (workout.goalType) {
+      tags.push(workout.goalType);
+    }
+
+    // Add duration tag if it exists
+    if (workout.duration) {
+      tags.push(`${workout.duration}min`);
+    }
+
+    // Add calories tag if it exists
+    if (workout.calories) {
+      tags.push(`${workout.calories}cal`);
+    }
+
+    return tags;
   };
-
-  const getRecommendedWorkouts = () => {
-    if (!user?.goals?.[0]?.type) return [];
-    return workoutPlans.filter(
-      (workout) => workout.goalType === user.goals[0].type
-    );
-  };
-
-  const formatDeadline = (deadline: any) => {
-    if (!deadline) return "No deadline set";
-    const date = deadline.toDate();
-    return date.toLocaleDateString();
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
-
-  const recommendedWorkouts = getRecommendedWorkouts();
-  const currentGoal = user?.goals?.[0];
 
   return (
     <ScrollView style={styles.container}>
-      {/* Current Goal Section */}
-      <View style={styles.goalSection}>
-        <Text style={styles.sectionTitle}>Current Goal</Text>
-        {currentGoal ? (
-          <View style={styles.goalCard}>
-            <View style={styles.goalHeader}>
-              <Ionicons
-                name={getGoalIcon(currentGoal.type)}
-                size={24}
-                color={COLORS.primary}
-              />
-              <Text style={styles.goalType}>
-                {currentGoal.type.charAt(0).toUpperCase() +
-                  currentGoal.type.slice(1)}
-              </Text>
-            </View>
-            <Text style={styles.goalDeadline}>
-              Target Date: {formatDeadline(currentGoal.deadline)}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.noGoal}>No goal set</Text>
-        )}
-      </View>
-
-      {/* Recommended Workouts Section */}
-      <View style={styles.workoutsSection}>
-        <Text style={styles.sectionTitle}>Recommended Workouts</Text>
-        {recommendedWorkouts.length > 0 ? (
-          recommendedWorkouts.map((workout) => (
-            <TouchableOpacity
-              key={workout.id}
-              style={styles.workoutCard}
-              onPress={() => {
-                // @ts-ignore - Known issue with expo-router types
-                router.push({
-                  pathname: "(tabs)/workout/[id]",
-                  params: { id: workout.id },
-                });
-              }}
-            >
-              <View style={styles.workoutInfo}>
-                <Text style={styles.workoutName}>{workout.name}</Text>
-                <Text style={styles.workoutDescription}>
-                  {workout.description}
-                </Text>
-                <View style={styles.workoutDetails}>
-                  <View style={styles.detailItem}>
-                    <Ionicons
-                      name="time-outline"
-                      size={16}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.detailText}>
-                      {workout.duration} min
-                    </Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons
-                      name="flame-outline"
-                      size={16}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.detailText}>
-                      {workout.calories} calories
-                    </Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Ionicons
-                      name="speedometer-outline"
-                      size={16}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.detailText}>
-                      {workout.difficulty.charAt(0).toUpperCase() +
-                        workout.difficulty.slice(1)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <Ionicons
-                name="chevron-forward-outline"
-                size={24}
-                color={COLORS.primary}
-              />
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.noWorkouts}>
-            No workouts available for your goal type
-          </Text>
-        )}
-      </View>
-
       {/* Quick Start Section */}
       <View style={styles.quickStartSection}>
         <TouchableOpacity
           style={styles.quickStartButton}
-          // @ts-ignore - Known issue with expo-router types
-          onPress={() => router.push("(tabs)/workout/quick-start")}
+          onPress={() => router.push("/workout/quick-start")}
         >
-          <Ionicons name="play" size={24} color="#fff" />
-          <Text style={styles.quickStartText}>Quick Start Workout</Text>
+          <View style={styles.quickStartContent}>
+            <Ionicons name="flash" size={24} color={COLORS.primary} />
+            <View style={styles.quickStartText}>
+              <Text style={styles.quickStartTitle}>Quick Start</Text>
+              <Text style={styles.quickStartSubtitle}>
+                Jump into a beginner-friendly workout
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={24}
+            color={COLORS.textSecondary}
+          />
         </TouchableOpacity>
+      </View>
+
+      {/* Settings Button */}
+      <View style={styles.settingsSection}>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => router.push("/workout/settings")}
+        >
+          <View style={styles.settingsContent}>
+            <Ionicons
+              name="settings-outline"
+              size={24}
+              color={COLORS.primary}
+            />
+            <View style={styles.settingsText}>
+              <Text style={styles.settingsTitle}>Workout Settings</Text>
+              <Text style={styles.settingsSubtitle}>
+                Customize your exercise preferences
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={24}
+            color={COLORS.textSecondary}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Workout Plans */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Workout Plans</Text>
+        {workouts.map((workout, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.workoutCard}
+            onPress={() => router.push(`/workout/${workout.id}`)}
+          >
+            <Image
+              source={getExerciseImage(workout.exercises[0].id)}
+              style={styles.workoutImage}
+              resizeMode="cover"
+            />
+            <View style={styles.workoutInfo}>
+              <Text style={styles.workoutTitle}>{workout.name}</Text>
+              <Text style={styles.workoutSubtitle}>
+                {workout.exercises.length} exercises • {workout.difficulty}
+              </Text>
+              <View style={styles.workoutTags}>
+                {getWorkoutTags(workout).map((tag, tagIndex) => (
+                  <View key={tagIndex} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color={COLORS.textSecondary}
+            />
+          </TouchableOpacity>
+        ))}
       </View>
     </ScrollView>
   );
@@ -206,116 +206,126 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  goalSection: {
-    padding: 20,
-    backgroundColor: COLORS.background,
+  quickStartSection: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  quickStartButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.card,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  quickStartContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  quickStartText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  quickStartTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  quickStartSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  settingsSection: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  settingsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: COLORS.card,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  settingsContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  settingsText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  settingsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  settingsSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  section: {
+    padding: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 15,
+    marginBottom: 16,
     color: COLORS.text,
-  },
-  goalCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  goalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  goalType: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginLeft: 8,
-    color: COLORS.text,
-  },
-  goalDeadline: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-  },
-  noGoal: {
-    textAlign: "center",
-    color: COLORS.textSecondary,
-    fontStyle: "italic",
-  },
-  workoutsSection: {
-    padding: 20,
   },
   workoutCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.card,
+    padding: 12,
     borderRadius: 12,
-    padding: 16,
     marginBottom: 12,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  workoutImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
   },
   workoutInfo: {
     flex: 1,
   },
-  workoutName: {
+  workoutTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 4,
     color: COLORS.text,
+    marginBottom: 4,
   },
-  workoutDescription: {
+  workoutSubtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
     marginBottom: 8,
   },
-  workoutDetails: {
+  workoutTags: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  detailItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  detailText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  noWorkouts: {
-    textAlign: "center",
-    color: COLORS.textSecondary,
-    fontStyle: "italic",
-    marginTop: 20,
-  },
-  quickStartSection: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  quickStartButton: {
-    backgroundColor: COLORS.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
+    flexWrap: "wrap",
     gap: 8,
   },
-  quickStartText: {
-    color: COLORS.card,
-    fontSize: 16,
-    fontWeight: "600",
+  tag: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  tagText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
   },
 });

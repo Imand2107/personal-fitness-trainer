@@ -10,11 +10,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../../firebase/config";
+import { auth, usersCollection } from "../../firebase/config";
 import { Ionicons } from "@expo/vector-icons";
 import { commonExercises } from "../../assets/data/workouts";
-import { Exercise, GoalType } from "../../src/types/workout";
+import { Exercise as WorkoutExercise, GoalType } from "../../src/types/workout";
 import { useAuth } from "../../src/hooks/useAuth";
+import { getCurrentUser, updateUserProfile } from "../../src/services/auth";
+import { COLORS } from "../../constants/Colors";
 
 // Helper function to get exercise image
 const getExerciseImage = (exerciseId: string) => {
@@ -35,7 +37,7 @@ const getExerciseImage = (exerciseId: string) => {
 
   return (
     imageMap[exerciseId] || require("../../assets/images/exercises/plank.jpg")
-  ); // Default image
+  );
 };
 
 export default function ExerciseSetupScreen() {
@@ -47,16 +49,26 @@ export default function ExerciseSetupScreen() {
   const [userGoal, setUserGoal] = useState<GoalType>("weight");
 
   useEffect(() => {
-    // Fetch user's goal from Firestore
     const fetchUserGoal = async () => {
-      if (!user) return;
-      // Add logic to fetch user's goal from Firestore
+      try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) return;
+
+        if (currentUser.goals && currentUser.goals.length > 0) {
+          setUserGoal(currentUser.goals[0].type);
+        }
+      } catch (error) {
+        console.error("Error fetching user goal:", error);
+      }
     };
     fetchUserGoal();
-  }, [user]);
+  }, []);
 
   const getRecommendedExercises = () => {
-    const exercises = Object.values(commonExercises);
+    const exercises = Object.entries(commonExercises).map(([id, exercise]) => ({
+      ...exercise,
+      id,
+    }));
 
     switch (userGoal) {
       case "weight":
@@ -110,9 +122,12 @@ export default function ExerciseSetupScreen() {
 
     setLoading(true);
     try {
-      if (!user) throw new Error("No user found");
+      const currentUser = await getCurrentUser();
+      if (!currentUser) throw new Error("No user found");
 
-      await updateDoc(doc(db, "users", user.uid), {
+      // Update the user's profile with selected exercises
+      await updateUserProfile({
+        ...currentUser.profile,
         selectedExercises,
         onboardingCompleted: true,
       });
@@ -135,7 +150,7 @@ export default function ExerciseSetupScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
           <Text style={styles.backButtonText}>Goals</Text>
         </TouchableOpacity>
         <View style={styles.progressIndicator}>
@@ -155,7 +170,7 @@ export default function ExerciseSetupScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <View style={styles.exercisesGrid}>
-          {recommendedExercises.map((exercise: Exercise) => (
+          {recommendedExercises.map((exercise) => (
             <TouchableOpacity
               key={exercise.id}
               style={[
@@ -187,7 +202,11 @@ export default function ExerciseSetupScreen() {
               </View>
               {selectedExercises.includes(exercise.id) && (
                 <View style={styles.checkmark}>
-                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={24}
+                    color={COLORS.success}
+                  />
                 </View>
               )}
             </TouchableOpacity>
@@ -214,7 +233,7 @@ export default function ExerciseSetupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.background,
   },
   header: {
     flexDirection: "row",
@@ -223,7 +242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: COLORS.border,
   },
   backButton: {
     flexDirection: "row",
@@ -231,7 +250,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backButtonText: {
-    color: "#007AFF",
+    color: COLORS.primary,
     fontSize: 16,
     marginLeft: 4,
   },
@@ -244,13 +263,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: COLORS.border,
   },
   progressDotCompleted: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: COLORS.success,
   },
   progressDotActive: {
-    backgroundColor: "#2196f3",
+    backgroundColor: COLORS.primary,
   },
   scrollContent: {
     flex: 1,
@@ -261,10 +280,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 10,
     textAlign: "center",
+    color: COLORS.text,
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 30,
     textAlign: "center",
   },
@@ -273,16 +293,21 @@ const styles = StyleSheet.create({
   },
   exerciseCard: {
     flexDirection: "row",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   selectedCard: {
-    backgroundColor: "#e3f2fd",
-    borderColor: "#2196f3",
+    backgroundColor: `${COLORS.primary}10`,
+    borderColor: COLORS.primary,
   },
   exerciseImage: {
     width: 80,
@@ -297,11 +322,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     marginBottom: 4,
-    color: "#333",
+    color: COLORS.text,
   },
   exerciseDetail: {
     fontSize: 14,
-    color: "#666",
+    color: COLORS.textSecondary,
     marginBottom: 4,
   },
   targetMuscles: {
@@ -312,15 +337,15 @@ const styles = StyleSheet.create({
   },
   muscle: {
     fontSize: 12,
-    color: "#fff",
-    backgroundColor: "#9e9e9e",
+    color: COLORS.card,
+    backgroundColor: COLORS.textSecondary,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
   },
   tips: {
     fontSize: 12,
-    color: "#666",
+    color: COLORS.textSecondary,
     fontStyle: "italic",
   },
   checkmark: {
@@ -329,23 +354,28 @@ const styles = StyleSheet.create({
     right: 8,
   },
   button: {
-    backgroundColor: "#2196f3",
+    backgroundColor: COLORS.primary,
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: "center",
     marginTop: 24,
     marginBottom: 32,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   buttonDisabled: {
-    backgroundColor: "#bdbdbd",
+    backgroundColor: COLORS.textSecondary,
   },
   buttonText: {
-    color: "#fff",
+    color: COLORS.card,
     fontSize: 16,
     fontWeight: "600",
   },
   error: {
-    color: "#f44336",
+    color: COLORS.error,
     marginBottom: 20,
     textAlign: "center",
   },

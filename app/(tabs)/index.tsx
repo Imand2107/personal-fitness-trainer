@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getCurrentUser } from "../../src/services/auth";
 import { getUserWorkouts } from "../../src/services/workout";
@@ -30,6 +30,31 @@ const COLORS = {
   divider: "#FFE5E5",
 };
 
+interface AchievementCardProps {
+  title: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  date: string;
+}
+
+const AchievementCard = ({
+  title,
+  description,
+  icon,
+  date,
+}: AchievementCardProps) => (
+  <View style={styles.achievementCard}>
+    <View style={styles.achievementIcon}>
+      <Ionicons name={icon} size={24} color={COLORS.secondary} />
+    </View>
+    <View style={styles.achievementInfo}>
+      <Text style={styles.achievementTitle}>{title}</Text>
+      <Text style={styles.achievementDescription}>{description}</Text>
+      <Text style={styles.achievementDate}>{date}</Text>
+    </View>
+  </View>
+);
+
 export default function HomeScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [recentWorkouts, setRecentWorkouts] = useState<Workout[]>([]);
@@ -39,14 +64,18 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState(0);
   const [totalMinutes, setTotalMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState<Progress[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, [])
+  );
 
   const loadUserData = async () => {
     try {
+      setLoading(true);
       const currentUser = await getCurrentUser();
       if (!currentUser) {
         router.replace("/(auth)/login");
@@ -245,7 +274,7 @@ export default function HomeScreen() {
               />
             </View>
             <Text style={styles.goalDeadline}>
-              Target: {goal.deadline.toDate().toLocaleDateString()}
+              Target: {goal.deadline ? goal.deadline.toDate().toLocaleDateString() : 'No deadline set'}
             </Text>
           </View>
         ))}
@@ -268,6 +297,36 @@ export default function HomeScreen() {
           <Ionicons name="analytics" size={24} color="#FF6B6B" />
           <Text style={styles.actionText}>Update Goals</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Achievements Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Achievements</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllButton}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <AchievementCard
+            title="First Workout"
+            description="Completed your first workout"
+            icon="trophy"
+            date="Today"
+          />
+          <AchievementCard
+            title="Consistency"
+            description="Completed 3 workouts this week"
+            icon="star"
+            date="2 days ago"
+          />
+          <AchievementCard
+            title="Early Bird"
+            description="Completed a morning workout"
+            icon="sunny"
+            date="Yesterday"
+          />
+        </ScrollView>
       </View>
 
       {/* Recent Workouts */}
@@ -301,37 +360,78 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))
         ) : (
-          <Text style={styles.emptyText}>No recent workouts</Text>
+          <View style={[styles.noProgressCard, { marginTop: 8 }]}>
+            <Ionicons
+              name="barbell-outline"
+              size={40}
+              color={COLORS.textSecondary}
+            />
+            <Text style={[styles.noProgressText, { marginTop: 12 }]}>
+              No Recent Workouts
+            </Text>
+            <Text style={[styles.noProgressSubtext, { marginBottom: 16 }]}>
+              Start your fitness journey today! Choose a workout plan and begin
+              your transformation.
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.startFirstWorkoutButton,
+                { backgroundColor: COLORS.primary },
+              ]}
+              onPress={() => router.push("/(tabs)/workout")}
+            >
+              <View style={styles.startFirstWorkoutContent}>
+                <Ionicons name="play-circle" size={24} color={COLORS.card} />
+                <Text style={styles.startFirstWorkoutText}>
+                  Start Your First Workout
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
       {/* Progress Summary */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Progress Summary</Text>
-        {Object.entries(latestProgress).map(([type, progress]) => (
-          <View key={type} style={styles.progressCard}>
-            <View style={styles.progressHeader}>
-              <Ionicons
-                name={
-                  type === "weight"
-                    ? "scale"
-                    : type === "strength"
-                    ? "barbell"
-                    : "pulse"
-                }
-                size={24}
-                color="#007AFF"
-              />
-              <Text style={styles.progressType}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
+        {Object.keys(latestProgress).length > 0 ? (
+          Object.entries(latestProgress).map(([type, progress]) => (
+            <View key={type} style={styles.progressCard}>
+              <View style={styles.progressHeader}>
+                <Ionicons
+                  name={
+                    type === "weight"
+                      ? "scale"
+                      : type === "strength"
+                      ? "barbell"
+                      : "pulse"
+                  }
+                  size={24}
+                  color="#007AFF"
+                />
+                <Text style={styles.progressType}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </View>
+              <Text style={styles.progressValue}>{progress.value}</Text>
+              <Text style={styles.progressDate}>
+                {progress.date.toDate().toLocaleDateString()}
               </Text>
             </View>
-            <Text style={styles.progressValue}>{progress.value}</Text>
-            <Text style={styles.progressDate}>
-              {progress.date.toDate().toLocaleDateString()}
+          ))
+        ) : (
+          <View style={styles.noProgressCard}>
+            <Ionicons
+              name="fitness-outline"
+              size={24}
+              color={COLORS.textSecondary}
+            />
+            <Text style={styles.noProgressText}>No recent progress</Text>
+            <Text style={styles.noProgressSubtext}>
+              Complete workouts to track your progress
             </Text>
           </View>
-        ))}
+        )}
       </View>
     </ScrollView>
   );
@@ -583,5 +683,95 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: 8,
+  },
+  achievementCard: {
+    flexDirection: "row",
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 16,
+    width: 280,
+    shadowColor: COLORS.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  achievementIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.background,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  achievementInfo: {
+    flex: 1,
+  },
+  achievementTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  achievementDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+  },
+  achievementDate: {
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  noProgressCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginTop: 8,
+  },
+  noProgressText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: COLORS.textSecondary,
+    marginTop: 8,
+  },
+  noProgressSubtext: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  startFirstWorkoutButton: {
+    width: "100%",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: COLORS.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  startFirstWorkoutContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  startFirstWorkoutText: {
+    color: COLORS.card,
+    fontSize: 16,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
 });

@@ -52,6 +52,13 @@ export default function WorkoutLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="settings"
+        options={{
+          title: "Workout Settings",
+          presentation: "modal",
+        }}
+      />
     </Stack>
   );
 }

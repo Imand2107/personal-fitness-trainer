@@ -11,12 +11,14 @@ export interface Goal {
 export interface UserProfile {
   name: string;
   age: number;
+  dateOfBirth: Timestamp;
   height: number;
   weight: number;
   bmi: number;
   gender: 'male' | 'female';
   onboardingCompleted: boolean;
   bodyType?: 'ectomorph' | 'mesomorph' | 'endomorph';
+  selectedExercises?: string[];
 }
 
 export interface User {
