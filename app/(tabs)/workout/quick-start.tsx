@@ -97,6 +97,8 @@ export default function QuickStartScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [previousVolume, setPreviousVolume] = useState(0.5);
   const [tooltipProgress, setTooltipProgress] = useState(0);
+  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentExercise = workout?.exercises[currentExerciseIndex];
 
@@ -135,16 +137,17 @@ export default function QuickStartScreen() {
   const loadBackgroundMusic = async () => {
     try {
       console.log("[Sound] Loading background music...");
-      const { sound } = await Audio.Sound.createAsync(
+      const { sound: music } = await Audio.Sound.createAsync(
         require("../../../assets/audio/workout-music.mp3"),
         {
           shouldPlay: false,
           isLooping: true,
-          volume: 0,
+          volume: 0.5,
         },
         (status) => {
           if (status.isLoaded) {
             console.log("[Sound] Background music loaded successfully");
+            setBgMusicVolume(0.5);
           } else if (status.error) {
             console.error(
               "[Sound] Error loading background music:",
@@ -153,16 +156,22 @@ export default function QuickStartScreen() {
           }
         }
       );
-      setBgMusic(sound);
+      setBgMusic(music);
+      setIsAudioReady(true);
       console.log("[Sound] Background music initialized");
     } catch (error) {
       console.error("[Sound] Error loading background music:", error);
+      setError("Failed to load background music");
     }
   };
 
   // Modified countdown effect to start music
   useEffect(() => {
     if (showCountdown) {
+      if (countdownValue === 3) {
+        playCountdownSound();
+      }
+      
       if (countdownValue > 0) {
         // Animate scale with safe numeric values
         Animated.sequence([
@@ -186,10 +195,55 @@ export default function QuickStartScreen() {
       } else {
         setShowCountdown(false);
         setIsPaused(false);
-        fadeInMusic();
+        if (bgMusic) {
+          bgMusic.playAsync();
+        }
       }
     }
   }, [showCountdown, countdownValue]);
+
+  // Initialize audio when component mounts
+  useEffect(() => {
+    let mounted = true;
+
+    const initializeAudio = async () => {
+      try {
+        console.log("[Sound] Initializing audio...");
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+        });
+
+        if (mounted) {
+          await loadBackgroundMusic();
+          await loadCompletionSound();
+        }
+      } catch (error) {
+        console.error("[Sound] Error initializing audio:", error);
+      }
+    };
+
+    initializeAudio();
+
+    return () => {
+      mounted = false;
+      // Cleanup sounds
+      const cleanup = async () => {
+        if (bgMusic) {
+          await fadeOutMusic();
+          await bgMusic.unloadAsync();
+        }
+        if (sound) {
+          await sound.unloadAsync();
+        }
+        if (completionSound) {
+          await completionSound.unloadAsync();
+        }
+      };
+      cleanup();
+    };
+  }, []);
 
   // Modify fadeInMusic function for safer volume handling
   const fadeInMusic = async () => {
@@ -289,46 +343,6 @@ export default function QuickStartScreen() {
     }
   };
 
-  // Load sounds when component mounts
-  useEffect(() => {
-    let mounted = true;
-
-    const initializeAudio = async () => {
-      try {
-        console.log("[Sound] Initializing audio...");
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: true,
-        });
-
-        if (mounted) {
-          await loadBackgroundMusic();
-          await loadCompletionSound();
-          await playCountdownSound();
-        }
-      } catch (error) {
-        console.error("[Sound] Error initializing audio:", error);
-      }
-    };
-
-    initializeAudio();
-
-    return () => {
-      mounted = false;
-      // Cleanup sounds
-      if (bgMusic) {
-        bgMusic.unloadAsync();
-      }
-      if (sound) {
-        sound.unloadAsync();
-      }
-      if (completionSound) {
-        completionSound.unloadAsync();
-      }
-    };
-  }, []);
-
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -402,13 +416,14 @@ export default function QuickStartScreen() {
         // Unmute - restore previous volume
         await bgMusic.setVolumeAsync(previousVolume);
         setBgMusicVolume(previousVolume);
+        setIsMuted(false);
       } else {
         // Mute - save current volume and set to 0
         setPreviousVolume(bgMusicVolume);
         await bgMusic.setVolumeAsync(0);
         setBgMusicVolume(0);
+        setIsMuted(true);
       }
-      setIsMuted(!isMuted);
     } catch (error) {
       console.error("Error toggling mute:", error);
     }
@@ -465,24 +480,6 @@ export default function QuickStartScreen() {
       console.error("Error completing workout:", error);
     }
   };
-
-  // Add cleanup effect for navigation
-  useEffect(() => {
-    return () => {
-      // Cleanup when component unmounts
-      if (bgMusic) {
-        fadeOutMusic().then(() => {
-          bgMusic.unloadAsync();
-        });
-      }
-      if (sound) {
-        sound.unloadAsync();
-      }
-      if (completionSound) {
-        completionSound.unloadAsync();
-      }
-    };
-  }, [bgMusic, sound, completionSound]);
 
   // Modify handleQuit function
   const handleQuit = async () => {

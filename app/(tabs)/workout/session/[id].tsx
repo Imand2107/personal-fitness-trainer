@@ -239,19 +239,19 @@ export default function WorkoutSessionScreen() {
     try {
       console.log("Loading background music...");
       const { sound: music } = await Audio.Sound.createAsync(
-        require("../../../../assets/audio/background-music.mp3"),
+        require("../../../../assets/audio/workout-music.mp3"),
         {
           isLooping: true,
-          volume: 0,
+          volume: 1,
           shouldPlay: false,
         }
       );
       console.log("Background music loaded successfully");
       setBgMusic(music);
-      return music;
+      setIsAudioReady(true);
     } catch (error) {
       console.error("Error loading background music:", error);
-      return null;
+      setError("Failed to load background music");
     }
   };
 
@@ -313,159 +313,105 @@ export default function WorkoutSessionScreen() {
     }
   };
 
-  // Initialize audio settings and load sounds
+  // Initialize audio when component mounts
   useEffect(() => {
-    let isMounted = true;
-
     const initializeAudio = async () => {
       try {
-        console.log("Initializing audio...");
         await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          staysActiveInBackground: true,
           playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
           shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
         });
-
-        if (isMounted) {
-          const [musicSound, completeSound] = await Promise.all([
-            loadBackgroundMusic(),
-            loadCompletionSound(),
-          ]);
-
-          if (isMounted && musicSound && completeSound) {
-            console.log("All sounds loaded successfully");
-            setIsAudioReady(true);
-          }
-        }
+        await loadBackgroundMusic();
       } catch (error) {
         console.error("Error initializing audio:", error);
-        if (isMounted) {
-          setError("Failed to initialize audio. Please restart the app.");
-        }
+        setError("Failed to initialize audio");
       }
     };
 
     initializeAudio();
 
     return () => {
-      isMounted = false;
       const cleanup = async () => {
-        try {
-          if (bgMusic) {
-            await fadeOutMusic();
-            await bgMusic.unloadAsync();
-          }
-          if (completionSound) {
-            await completionSound.unloadAsync();
-          }
-          if (sound) {
-            await sound.unloadAsync();
-          }
-        } catch (error) {
-          console.error("Error cleaning up sounds:", error);
+        if (bgMusic) {
+          await bgMusic.unloadAsync();
+        }
+        if (sound) {
+          await sound.unloadAsync();
+        }
+        if (completionSound) {
+          await completionSound.unloadAsync();
         }
       };
       cleanup();
     };
   }, []);
 
-  const fadeInMusic = async () => {
+  // Start background music when workout starts
+  const startWorkout = async () => {
+    if (!isAudioReady) {
+      console.log("Audio not ready yet");
+      return;
+    }
+    
     try {
-      if (!bgMusic || !isAudioReady) return;
+      setShowCountdown(true);
+      let count = 3;
+      
+      const countdownInterval = setInterval(async () => {
+        if (count > 0) {
+          setCountdownValue(count);
+          await playCountdownSound();
+          count--;
+        } else {
+          clearInterval(countdownInterval);
+          setShowCountdown(false);
+          setIsPaused(false);
+          
+          // Start playing background music
+          if (bgMusic) {
+            await bgMusic.playAsync();
+          }
+        }
+      }, 1000);
+    } catch (error) {
+      console.error("Error starting workout:", error);
+      setError("Failed to start workout");
+    }
+  };
 
-      console.log("Starting music fade in...");
-      await bgMusic.setVolumeAsync(0);
-      await bgMusic.playAsync();
-
-      // Fade in more smoothly with smaller steps
-      for (let volume = 0; volume <= 0.5; volume += 0.1) {
-        if (!bgMusic) break;
-        await bgMusic.setVolumeAsync(volume);
-        await new Promise((resolve) => setTimeout(resolve, 100));
+  // Handle pause/resume with music
+  const handlePauseResume = async () => {
+    try {
+      if (isPaused) {
+        setIsPaused(false);
+        if (bgMusic) {
+          await bgMusic.playAsync();
+        }
+      } else {
+        setIsPaused(true);
+        if (bgMusic) {
+          await bgMusic.pauseAsync();
+        }
       }
     } catch (error) {
-      console.error("Error fading in music:", error);
+      console.error("Error handling pause/resume:", error);
     }
   };
 
-  // Modified countdown effect to start music
-  useEffect(() => {
-    if (showCountdown) {
-      if (countdownValue === 3) {  // Only play sound when countdown starts
-        // Play countdown sound
-        playCountdownSound();
-      }
-      
-      if (countdownValue > 0) {
-        // Animate scale up and down
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.5,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        // Decrease countdown after 1 second
-        const timer = setTimeout(() => {
-          setCountdownValue((prev) => prev - 1);
-        }, 1000);
-
-        return () => clearTimeout(timer);
-      } else {
-        // Start workout and fade in music
-        setShowCountdown(false);
-        setIsPaused(false);
-        fadeInMusic();
-      }
-    }
-  }, [showCountdown, countdownValue]);
-
-  const handlePauseResume = async () => {
-    if (isPaused) {
-      setShowCountdown(true);
-      setCountdownValue(3);
-      playCountdownSound();
-    } else {
-      setIsPaused(true);
-      if (bgMusic) {
-        await bgMusic.pauseAsync();
-      }
-    }
-  };
-
-  // Add resume music function
-  const resumeMusic = async () => {
-    if (!bgMusic || !isPaused) return;
-    await bgMusic.playAsync();
-    // Restore previous volume
-    if (bgMusicVolume > 0) {
-      await bgMusic.setVolumeAsync(bgMusicVolume);
-    }
-  };
-
+  // Add volume control
   const handleMuteToggle = async () => {
-    if (!bgMusic) return;
-
     try {
+      if (!bgMusic) return;
+      
       if (isMuted) {
-        // Unmute - restore previous volume
         await bgMusic.setVolumeAsync(previousVolume);
-        setBgMusicVolume(previousVolume);
+        setIsMuted(false);
       } else {
-        // Mute - save current volume and set to 0
         setPreviousVolume(bgMusicVolume);
         await bgMusic.setVolumeAsync(0);
-        setBgMusicVolume(0);
+        setIsMuted(true);
       }
-      setIsMuted(!isMuted);
     } catch (error) {
       console.error("Error toggling mute:", error);
     }
@@ -490,7 +436,7 @@ export default function WorkoutSessionScreen() {
         router.replace("/(tabs)/workout");
       } else {
         setIsPaused(false);
-        resumeMusic();
+        await bgMusic?.playAsync();
       }
     } else {
       // Fallback to Alert for native
@@ -502,7 +448,7 @@ export default function WorkoutSessionScreen() {
             text: "Resume",
             onPress: async () => {
               setIsPaused(false);
-              await resumeMusic();
+              await bgMusic?.playAsync();
             },
             style: "default",
           },
@@ -510,7 +456,7 @@ export default function WorkoutSessionScreen() {
             text: "Cancel",
             onPress: async () => {
               setIsPaused(false);
-              await resumeMusic();
+              await bgMusic?.playAsync();
             },
             style: "cancel",
           },
@@ -549,9 +495,9 @@ export default function WorkoutSessionScreen() {
             onPress={handleMuteToggle}
           >
             <Ionicons
-              name={isMuted ? "volume-mute" : "volume-medium"}
-              size={20}
-              color={COLORS.textSecondary}
+              name={isMuted ? "volume-mute-outline" : "volume-medium-outline"}
+              size={24}
+              color={COLORS.text}
             />
           </TouchableOpacity>
         </View>
@@ -696,6 +642,19 @@ export default function WorkoutSessionScreen() {
                 <Text style={styles.quitButtonText}>Quit Workout</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Start button */}
+            {isPaused && currentExerciseIndex === 0 && (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={startWorkout}
+                disabled={!isAudioReady}
+              >
+                <Text style={styles.startButtonText}>
+                  {isAudioReady ? "Start Workout" : "Loading..."}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
 
@@ -830,16 +789,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   countdownOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.background,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 5,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
   countdownText: {
     fontSize: 120,
-    fontWeight: "bold",
     color: COLORS.primary,
+    fontWeight: 'bold',
   },
   nextExerciseTitle: {
     fontSize: 20,
@@ -978,16 +941,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   muteButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    padding: 10,
+  },
+  startButton: {
+    backgroundColor: COLORS.primary,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  startButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
