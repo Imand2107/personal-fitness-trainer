@@ -66,7 +66,7 @@ export default function RootLayout() {
     <ThemeProvider value={isDarkColorScheme ? DARK_THEME : LIGHT_THEME}>
       <Provider store={store}>
         <StatusBar style={isDarkColorScheme ? "light" : "dark"} />
-        <Stack />
+        <Stack screenOptions={{ headerShown: false }} />
       </Provider>
     </ThemeProvider>
   );
