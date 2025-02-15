@@ -274,7 +274,7 @@ export default function HomeScreen() {
               />
             </View>
             <Text style={styles.goalDeadline}>
-              Target: {goal.deadline.toDate().toLocaleDateString()}
+              Target: {goal.deadline ? goal.deadline.toDate().toLocaleDateString() : 'No deadline set'}
             </Text>
           </View>
         ))}
