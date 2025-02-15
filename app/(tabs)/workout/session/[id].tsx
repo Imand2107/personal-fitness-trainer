@@ -393,6 +393,11 @@ export default function WorkoutSessionScreen() {
   // Modified countdown effect to start music
   useEffect(() => {
     if (showCountdown) {
+      if (countdownValue === 3) {  // Only play sound when countdown starts
+        // Play countdown sound
+        playCountdownSound();
+      }
+      
       if (countdownValue > 0) {
         // Animate scale up and down
         Animated.sequence([
@@ -407,9 +412,6 @@ export default function WorkoutSessionScreen() {
             useNativeDriver: true,
           }),
         ]).start();
-
-        // Play countdown sound
-        playCountdownSound();
 
         // Decrease countdown after 1 second
         const timer = setTimeout(() => {
